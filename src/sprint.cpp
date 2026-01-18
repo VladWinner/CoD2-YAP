@@ -26,6 +26,141 @@ struct kbutton_t
 
 namespace sprint {
 
+
+	struct eWeaponDef {
+		std::string weaponName;
+		float vSprintBob[2];
+		float sprintSpeedScale;
+		std::optional<std::array<float, 3>> vSprintRot;
+		std::optional<std::array<float, 3>> vSprintMove;
+
+		eWeaponDef() : weaponName(""), vSprintBob{ 0.0f, 0.0f }, sprintSpeedScale{ 1.f }, vSprintRot{}, vSprintMove{} {}
+	};
+
+	std::unordered_map<std::string, eWeaponDef> g_eWeaponDefs;
+
+	const eWeaponDef* GetEWeapon(const char* weaponName) {
+		if (!weaponName || g_eWeaponDefs.empty()) return nullptr;
+		auto it = g_eWeaponDefs.find(weaponName);
+		if (it != g_eWeaponDefs.end()) {
+			return &it->second;
+		}
+
+		return nullptr;
+	}
+
+	const char* GetCurrentWeaponName() {
+		return NULL;
+	}
+
+	const eWeaponDef* GetCurrentEWeapon() {
+		return GetEWeapon(GetCurrentWeaponName());
+	}
+
+	void LoadEWeaponsFromDirectory(const std::filesystem::path& eWeaponsDir, bool overwrite = true) {
+		if (!std::filesystem::exists(eWeaponsDir)) {
+			Com_Printf("eWeapons directory not found: %s\n", eWeaponsDir.string().c_str());
+			return;
+		}
+
+		Com_Printf("Loading eWeapons from: %s\n", eWeaponsDir.string().c_str());
+
+		for (const auto& entry : std::filesystem::directory_iterator(eWeaponsDir)) {
+			if (entry.path().extension() != ".json") continue;
+
+			std::string weaponName = entry.path().stem().string();
+
+			if (!overwrite && g_eWeaponDefs.find(weaponName) != g_eWeaponDefs.end()) {
+				Com_Printf("Skipping '%s' (already loaded with higher priority)\n", weaponName.c_str());
+				continue;
+			}
+
+			try {
+				std::ifstream file(entry.path());
+				nlohmann::json j = nlohmann::json::parse(file);
+
+				eWeaponDef weaponDef;
+				weaponDef.weaponName = weaponName;
+
+				if (j.contains("sprintBobH")) {
+					weaponDef.vSprintBob[0] = j["sprintBobH"].get<float>();
+				}
+
+				if (j.contains("sprintBobV")) {
+					weaponDef.vSprintBob[1] = j["sprintBobV"].get<float>();
+				}
+
+				if (j.contains("sprintSpeedScale")) {
+					weaponDef.sprintSpeedScale = j["sprintSpeedScale"].get<float>();
+				}
+
+				if (j.contains("SprintRot") && j["SprintRot"].is_array() && j["SprintRot"].size() == 3) {
+					weaponDef.vSprintRot = std::array<float, 3>{
+						j["SprintRot"][0].get<float>(),
+						j["SprintRot"][1].get<float>(),
+						j["SprintRot"][2].get<float>()
+					};
+				}
+
+
+
+				if (j.contains("SprintMove") && j["SprintMove"].is_array() && j["SprintMove"].size() == 3) {
+					weaponDef.vSprintMove = std::array<float, 3>{
+						j["SprintMove"][0].get<float>(),
+						j["SprintMove"][1].get<float>(),
+						j["SprintMove"][2].get<float>()
+					};
+				}
+
+				g_eWeaponDefs[weaponName] = weaponDef;
+
+				Com_Printf("Loaded eWeapon '%s' - sprintBobH: %.3f, sprintBobV: %.3f, sprintSpeedScale %.3f\n",
+					weaponName.c_str(),
+					weaponDef.vSprintBob[0],
+					weaponDef.vSprintBob[1],
+					weaponDef.sprintSpeedScale);
+
+			}
+			catch (const std::exception& e) {
+				Com_Printf("Failed to parse %s: %s\n",
+					entry.path().string().c_str(), e.what());
+			}
+		}
+	}
+
+	void loadEWeapons() {
+
+		g_eWeaponDefs.clear();
+		char modulePath[MAX_PATH];
+		GetModuleFileNameA(NULL, modulePath, MAX_PATH);
+		std::filesystem::path exePath(modulePath);
+		std::filesystem::path baseDir = exePath.parent_path();
+		auto* fs_game = dvars::Dvar_FindVar("fs_game");
+		auto* fs_basegame = dvars::Dvar_FindVar("fs_basegame");
+
+		std::filesystem::path baseEWeaponsDir = baseDir / "eWeapons";
+		LoadEWeaponsFromDirectory(baseEWeaponsDir, true);
+
+		if (fs_basegame && fs_basegame->value.string && fs_basegame->value.string[0] != '\0') {
+			std::filesystem::path fsBaseGameDir = baseDir / fs_basegame->value.string;
+			std::filesystem::path fsBaseGameEWeaponsDir = fsBaseGameDir / "eWeapons";
+			LoadEWeaponsFromDirectory(fsBaseGameEWeaponsDir, true);
+		}
+
+		if (fs_game && fs_game->value.string && fs_game->value.string[0] != '\0') {
+			std::filesystem::path fsGameDir = baseDir / fs_game->value.string;
+			std::filesystem::path fsGameEWeaponsDir = fsGameDir / "eWeapons";
+			LoadEWeaponsFromDirectory(fsGameEWeaponsDir, true);
+			Com_Printf("Loaded %d eWeapon definitions (fs_game: '%s' has priority)\n",
+				g_eWeaponDefs.size(),
+				fs_game->value.string);
+		}
+		else {
+			Com_Printf("Loaded %d eWeapon definitions from base directory\n",
+				g_eWeaponDefs.size());
+		}
+	}
+
 	void __cdecl Cmd_AddCommand(const char* command_name, void(__cdecl* function)()) {
 
 		printf("command name %s func %p\n", command_name, function);
@@ -80,13 +215,18 @@ namespace sprint {
 	dvar_s* yap_sprint_gun_ofs_r;
 	dvar_s* yap_sprint_gun_ofs_u;
 
-	dvar_s* yap_sprint_internal_yet;
-
 	dvar_s* yap_sprint_gun_bob_horz;
 
 	dvar_s* yap_sprint_gun_bob_vert;
 
 	dvar_s* yap_sprint_weaponBobAmplitudeSprinting;
+
+	dvar_s* yap_sprint_internal_yet;
+
+	dvar_s yap_sprint_gun_rot_p_fake;
+	dvar_s yap_sprint_gun_rot_r_fake;
+	dvar_s yap_sprint_gun_rot_y_fake;
+
 
 	dvar_s* yap_sprint_trying;
 
@@ -106,6 +246,10 @@ namespace sprint {
 	bool yap_is_sprinting() {
 		return yap_sprint_is_sprinting->value.integer != 0;
 	}
+
+
+
+
 
 	vector3 yap_sprint_gun_mov() {
 		return vector3{ yap_sprint_gun_mov_f->value.decimal,yap_sprint_gun_mov_r->value.decimal,yap_sprint_gun_mov_u->value.decimal };
@@ -184,6 +328,13 @@ namespace sprint {
 
 			yap_sprint_trying = dvars::Dvar_RegisterInt("yap_sprint_trying", 0, 0, 1, DVAR_ROM);
 			yap_sprint_is_sprinting = dvars::Dvar_RegisterInt("yap_sprint_is_sprinting", 0, 0, 1, 0);
+
+			Cmd_AddCommand("reload_eweapons", loadEWeapons);
+
+		}
+
+		void post_cg_init() override {
+			loadEWeapons();
 		}
 
 		void post_start() override {

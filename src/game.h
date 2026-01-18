@@ -186,4 +186,7 @@ namespace game {
 
 
 }
+
+WEAK game::symbol<int (const char *Format, ...)> Com_Printf{ 0x42C130 };
+
 extern void retptr();

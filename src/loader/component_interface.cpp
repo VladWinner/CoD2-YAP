@@ -67,6 +67,12 @@ void component_loader::post_gfx()
 		component_->post_gfx();
 }
 
+void component_loader::post_cg_init()
+{
+	for (const auto& component_ : get_components())
+		component_->post_cg_init();
+}
+
 void component_loader::pre_destroy()
 {
 	static auto handled = false;

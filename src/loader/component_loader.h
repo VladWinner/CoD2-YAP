@@ -43,6 +43,7 @@ public:
 	static bool post_start();
 	static bool post_load();
 	static void post_unpack();
+	static void post_cg_init();
 	static void post_gfx();
 	static void pre_destroy();
 	static void clean();

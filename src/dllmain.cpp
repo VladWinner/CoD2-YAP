@@ -155,6 +155,13 @@ BOOL __stdcall FreeLibraryHook(HMODULE hLibModule) {
     auto hModule = FreeLibraryD.unsafe_stdcall<BOOL>(hLibModule);
     return hModule;
 }
+uintptr_t CG_init_ptr;
+int CG_Init_stub() {
+    auto result = cdecl_call<int>(CG_init_ptr);
+    component_loader::post_cg_init();
+    return result;
+
+}
 
 void Init() {
     
@@ -168,6 +175,9 @@ void Init() {
     LoadLibraryD = safetyhook::create_inline(LoadLibraryA, LoadLibraryHook);
     component_loader::post_start();
     OpenConsoleAndRedirectIO();
+
+
+
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule,

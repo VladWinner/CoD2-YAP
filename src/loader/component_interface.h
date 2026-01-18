@@ -29,6 +29,10 @@ public:
 	{
 	}
 
+	virtual void post_cg_init()
+	{
+	}
+
 	virtual void* load_import([[maybe_unused]] const std::string& library, [[maybe_unused]] const std::string& function)
 	{
 		return nullptr;
