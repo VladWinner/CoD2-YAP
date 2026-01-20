@@ -95,6 +95,11 @@ namespace render {
 
 				});
 
+			// r_lodScale
+			Memory::VP::Patch<uint32_t>(gfx(0x1000AD0C + 1), DVAR_RENDERER | DVAR_ARCHIVE);
+			// r_lodBias
+			Memory::VP::Patch<uint32_t>(gfx(0x1000ACE5 + 1), DVAR_RENDERER | DVAR_ARCHIVE);
+
 		}
 
 
