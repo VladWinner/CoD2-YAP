@@ -44,23 +44,25 @@ namespace render {
 			SetProcessDPIAware();
 
 			if (!r_buf_dynamicIndexBuffer_mult) {
-				r_buf_dynamicIndexBuffer_mult = dvars::Dvar_RegisterInt("r_buf_dynamicIndexBuffer_mult", 4, 1, 16, DVAR_ARCHIVE);
-				r_buf_dynamicVertexBuffer_mult = dvars::Dvar_RegisterInt("r_buf_dynamicVertexBuffer_mult", 4, 1, 16, DVAR_ARCHIVE);
+				r_buf_dynamicIndexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicIndexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
+				r_buf_dynamicVertexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicVertexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
 
 				r_aspectratio_fix = dvars::Dvar_RegisterInt("r_aspectRatio_fix", 2, 0, 2, DVAR_ARCHIVE);
 
 			}
 			CreateMidHook(gfx(0x10011B60), [](SafetyHookContext& ctx) {
-				ctx.ecx *= r_buf_dynamicIndexBuffer_mult->value.integer;
-				printf("dynamic index buffer return %p ecx 0x%X\n", *(int*)ctx.esp, ctx.ecx);
+				auto value = (float)ctx.ecx * r_buf_dynamicIndexBuffer_mult->value.decimal;
+				ctx.ecx = (uint32_t)value;
+				printf("dynamic index buffer return %p ecx %d\n", *(int*)ctx.esp, ctx.ecx);
 				
 
 
 				});
 
 			CreateMidHook(gfx(0x10011AD0), [](SafetyHookContext& ctx) {
-				ctx.ecx *= r_buf_dynamicVertexBuffer_mult->value.integer;
-				printf("dynamic vertex buffer return %p ecx 0x%X\n", *(int*)ctx.esp, ctx.ecx);
+				auto value = (float)ctx.ecx * r_buf_dynamicVertexBuffer_mult->value.decimal;
+				ctx.ecx = (uint32_t)value;
+				printf("dynamic vertex buffer return %p ecx %d\n", *(int*)ctx.esp, ctx.ecx);
 
 
 
