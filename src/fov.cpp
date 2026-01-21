@@ -34,13 +34,13 @@ namespace fov {
 	void HandleWeaponADS_hack(float* current_weapon_fov) {
 		if (cg_fov) {
 			if (cg_fov_fix_lowfovads && cg_fov_fix_lowfovads->value.integer == 1) {
-				if (cg_fov->value.decimal < *current_weapon_fov) {
+				if (cg_fov->value.decimal <= *current_weapon_fov) {
 					float value = cg_fov->value.decimal / cg_fov_fix_lowfovads_default_fov->value.decimal;
 					*current_weapon_fov *= value;
 				}
 			}
 			else if (cg_fov_fix_lowfovads && cg_fov_fix_lowfovads->value.integer >= 2) {
-				if (cg_fov->value.decimal < cg_fov_fix_lowfovads_default_fov->value.decimal) {
+				if (cg_fov->value.decimal <= cg_fov_fix_lowfovads_default_fov->value.decimal) {
 					float value = cg_fov->value.decimal / cg_fov_fix_lowfovads_default_fov->value.decimal;
 					*current_weapon_fov *= value;
 				}
