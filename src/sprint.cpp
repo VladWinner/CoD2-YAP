@@ -15,7 +15,12 @@
 #include "dvars.h"
 #include "hooking.h"
 #include "GMath.h"
+#include "cod2_player.h"
 dvar_s* developer;
+
+#define CMD_SPRINT (1 << 31)
+#define PMF_SPRINTING CMD_SPRINT
+
 struct kbutton_t
 {
 	uint64_t down;
@@ -27,6 +32,92 @@ struct kbutton_t
 
 namespace sprint {
 
+	struct state {
+		uint32_t lastSprintTime;
+		// modern CODs do command time check, but UO/COD3 have a normalized float from 0.f->1.f
+		float SprintFaituge;
+		bool preventFatigueRegen; // Flag to prevent regen when player is trying to sprint while exhausted
+		int lastCommandTime;
+	};
+
+	// Initialize with full fatigue and no regen prevention
+	state g_sprintState = { 0, 1.0f, false };
+
+
+	dvar_s* yap_sprint_fatigue_min_threshold;
+	dvar_s* yap_sprint_fatigue_drain_rate;
+	dvar_s* yap_sprint_fatigue_regen_rate;
+	dvar_s* yap_sprint_fatigue_regen_delay;
+
+	dvar_s* yap_sprint_gun_rot_p;
+	dvar_s* yap_sprint_gun_rot_r;
+	dvar_s* yap_sprint_gun_rot_y;
+
+	dvar_s* yap_sprint_gun_mov_f;
+	dvar_s* yap_sprint_gun_mov_r;
+	dvar_s* yap_sprint_gun_mov_u;
+
+	dvar_s* yap_sprint_gun_ofs_f;
+	dvar_s* yap_sprint_gun_ofs_r;
+	dvar_s* yap_sprint_gun_ofs_u;
+
+	dvar_s* yap_sprint_gun_bob_horz;
+
+	dvar_s* yap_sprint_gun_bob_vert;
+
+	dvar_s* yap_sprint_weaponBobAmplitudeSprinting;
+
+	dvar_s* yap_sprint_internal_yet;
+
+	dvar_s* yap_player_sprintSpeedScale;
+
+	// Fake dvars for eWeapon values
+	dvar_s yap_sprint_gun_rot_p_fake;
+	dvar_s yap_sprint_gun_rot_r_fake;
+	dvar_s yap_sprint_gun_rot_y_fake;
+	dvar_s yap_sprint_gun_mov_f_fake;
+	dvar_s yap_sprint_gun_mov_r_fake;
+	dvar_s yap_sprint_gun_mov_u_fake;
+	dvar_s yap_sprint_gun_ofs_f_fake;
+	dvar_s yap_sprint_gun_ofs_r_fake;
+	dvar_s yap_sprint_gun_ofs_u_fake;
+	dvar_s yap_sprint_gun_bob_horz_fake;
+	dvar_s yap_sprint_gun_bob_vert_fake;
+
+	// Pointers to dvars (these will point to either real or fake)
+	dvar_s* yap_sprint_gun_rot_p_ptr;
+	dvar_s* yap_sprint_gun_rot_r_ptr;
+	dvar_s* yap_sprint_gun_rot_y_ptr;
+	dvar_s* yap_sprint_gun_mov_f_ptr;
+	dvar_s* yap_sprint_gun_mov_r_ptr;
+	dvar_s* yap_sprint_gun_mov_u_ptr;
+	dvar_s* yap_sprint_gun_ofs_f_ptr;
+	dvar_s* yap_sprint_gun_ofs_r_ptr;
+	dvar_s* yap_sprint_gun_ofs_u_ptr;
+	dvar_s* yap_sprint_gun_bob_horz_ptr;
+	dvar_s* yap_sprint_gun_bob_vert_ptr;
+
+
+	dvar_s* yap_sprint_trying;
+
+	dvar_s* yap_sprint_is_sprinting;
+
+	dvar_s* yay_sprint_gun_always_read_real;
+
+	void set_sprinting(bool sprinting) {
+		yap_sprint_is_sprinting->value.integer = sprinting ? 1 : 0;
+		yap_sprint_is_sprinting->latchedValue.integer = sprinting ? 1 : 0;
+		yap_sprint_is_sprinting->modified = true;
+
+		if (developer && developer->value.integer) {
+			printf("Sprint state changed to: %d\n", sprinting);
+		}
+	}
+
+
+	bool can_sprint() {
+		return g_sprintState.SprintFaituge >= yap_sprint_fatigue_min_threshold->value.decimal;
+	}
 
 	struct eWeaponDef {
 		std::string weaponName;
@@ -273,61 +364,6 @@ namespace sprint {
 		return cdecl_call<int>(setup_binds_og);
 	}
 
-	dvar_s* yap_sprint_gun_rot_p;
-	dvar_s* yap_sprint_gun_rot_r;
-	dvar_s* yap_sprint_gun_rot_y;
-
-	dvar_s* yap_sprint_gun_mov_f;
-	dvar_s* yap_sprint_gun_mov_r;
-	dvar_s* yap_sprint_gun_mov_u;
-
-	dvar_s* yap_sprint_gun_ofs_f;
-	dvar_s* yap_sprint_gun_ofs_r;
-	dvar_s* yap_sprint_gun_ofs_u;
-
-	dvar_s* yap_sprint_gun_bob_horz;
-
-	dvar_s* yap_sprint_gun_bob_vert;
-
-	dvar_s* yap_sprint_weaponBobAmplitudeSprinting;
-
-	dvar_s* yap_sprint_internal_yet;
-
-	dvar_s* yap_player_sprintSpeedScale;
-
-	// Fake dvars for eWeapon values
-	dvar_s yap_sprint_gun_rot_p_fake;
-	dvar_s yap_sprint_gun_rot_r_fake;
-	dvar_s yap_sprint_gun_rot_y_fake;
-	dvar_s yap_sprint_gun_mov_f_fake;
-	dvar_s yap_sprint_gun_mov_r_fake;
-	dvar_s yap_sprint_gun_mov_u_fake;
-	dvar_s yap_sprint_gun_ofs_f_fake;
-	dvar_s yap_sprint_gun_ofs_r_fake;
-	dvar_s yap_sprint_gun_ofs_u_fake;
-	dvar_s yap_sprint_gun_bob_horz_fake;
-	dvar_s yap_sprint_gun_bob_vert_fake;
-
-	// Pointers to dvars (these will point to either real or fake)
-	dvar_s* yap_sprint_gun_rot_p_ptr;
-	dvar_s* yap_sprint_gun_rot_r_ptr;
-	dvar_s* yap_sprint_gun_rot_y_ptr;
-	dvar_s* yap_sprint_gun_mov_f_ptr;
-	dvar_s* yap_sprint_gun_mov_r_ptr;
-	dvar_s* yap_sprint_gun_mov_u_ptr;
-	dvar_s* yap_sprint_gun_ofs_f_ptr;
-	dvar_s* yap_sprint_gun_ofs_r_ptr;
-	dvar_s* yap_sprint_gun_ofs_u_ptr;
-	dvar_s* yap_sprint_gun_bob_horz_ptr;
-	dvar_s* yap_sprint_gun_bob_vert_ptr;
-
-
-	dvar_s* yap_sprint_trying;
-
-	dvar_s* yap_sprint_is_sprinting;
-
-	dvar_s* yay_sprint_gun_always_read_real;
-
 	SAFETYHOOK_NOINLINE void update_sprint_gun_dvars() {
 		if (yay_sprint_gun_always_read_real->value.integer == 0 && GetCurrentEWeapon()) {
 			auto eweapon = GetCurrentEWeapon();
@@ -389,6 +425,9 @@ namespace sprint {
 	bool yap_is_sprinting() {
 		return yap_sprint_is_sprinting->value.integer != 0;
 	}
+
+
+
 
 	bool yap_is_trying_sprinting() {
 		return yap_sprint_trying->value.integer != 0;
@@ -463,12 +502,232 @@ namespace sprint {
 		return (sin(a1 * 4.0 + 1.5707964) * 0.2 + sin(a1 + a1)) * v6 * 0.75;
 	}
 
+	void PM_UpdateSprintingFlag(pmove_t* pm) {
+		if (!pm || !pm->ps)
+			return;
+		printf("ps pm %p %p\n", pm->ps,pm);
+
+		bool tryingToMove = false;
+
+		bool wantsToSprint = (pm->cmd.forwardmove || pm->cmd.rightmove) && (pm->cmd.buttons & CMD_SPRINT);
+
+		// Check ADS state - thing[46] is ADS fraction (0.0 = not ADS, 1.0 = full ADS)
+		float* thing = (float*)pm->ps;
+		float adsFraction = thing[46];
+		bool isADS = adsFraction >= 0.1f;
+		auto flags = pm->ps->pm_flags;
+		bool AllowedToSprint = !isADS && !(flags & PMF_CROUCH) && !(flags & PMF_PRONE) && !(flags & PMF_FRAG) && !(flags & PMF_MANTLE) && !(flags & PMF_LADDER);
+		if (wantsToSprint && can_sprint() && AllowedToSprint) {
+			// Activate sprinting only if not in ADS
+			pm->ps->pm_flags |= PMF_SPRINTING;
+			set_sprinting(true);
+			g_sprintState.preventFatigueRegen = false; // Allow regen when successfully sprinting
+		}
+		else {
+			// Deactivate sprinting (ADS, no fatigue, or not wanting to sprint)
+			pm->ps->pm_flags &= ~PMF_SPRINTING;
+			set_sprinting(false);
+
+			// If player wants to sprint but can't (exhausted), prevent fatigue regen
+			if (wantsToSprint && !can_sprint() && AllowedToSprint) {
+				g_sprintState.preventFatigueRegen = true;
+			}
+			else {
+				// Player let go of sprint or is in ADS, allow regen
+				g_sprintState.preventFatigueRegen = false;
+			}
+		}
+
+		if (developer && developer->value.integer) {
+			printf("pm_flags 0x%X adsFrac: %.3f %d, wantsSprint: %d, canSprint: %d, isADS: %d, preventRegen: %d\n",
+				pm->ps->pm_flags, adsFraction, pm->ps->commandTime, wantsToSprint, can_sprint(), isADS, g_sprintState.preventFatigueRegen);
+		}
+	}
+
+	// in UO this is only done from g side but in CoD2+ everythings been merged hmmm (well expect for linux server)
+	void PM_UpdateFatigue(pmove_t* pm) {
+		if (!pm || !pm->ps)
+			return;
+
+		printf("fatigue %f\n", g_sprintState.SprintFaituge);
+		int commandTime = pm->ps->commandTime;
+		static int lastUpdateTime = 0;
+
+		//if (commandTime == g_sprintState.lastCommandTime)
+		//	return;
+
+
+		if (lastUpdateTime == 0) {
+			lastUpdateTime = commandTime;
+			return;
+		}
+
+		int frameDeltaMs = commandTime - lastUpdateTime;
+		lastUpdateTime = commandTime;
+
+		if (frameDeltaMs <= 0 || frameDeltaMs > 1000)
+			return;
+
+		float frameTimeSec = frameDeltaMs * 0.001f;
+
+		if (yap_is_sprinting()) {
+			g_sprintState.lastSprintTime = commandTime;
+
+			float drainAmount = frameTimeSec * yap_sprint_fatigue_drain_rate->value.decimal;
+			g_sprintState.SprintFaituge -= drainAmount;
+
+			// DEBUG: Print every frame while sprinting
+			printf("DRAIN: commandTime=%d, lastUpdateTime=%d, frameDeltaMs=%d, frameTimeSec=%.4f, drainRate=%.4f, drainAmount=%.6f, newFatigue=%.4f\n",
+				commandTime, lastUpdateTime - frameDeltaMs, frameDeltaMs, frameTimeSec,
+				yap_sprint_fatigue_drain_rate->value.decimal, drainAmount, g_sprintState.SprintFaituge);
+
+			if (g_sprintState.SprintFaituge < 0.0f) {
+				g_sprintState.SprintFaituge = 0.0f;
+				set_sprinting(false);
+				pm->ps->pm_flags &= ~PMF_SPRINTING;
+			}
+			g_sprintState.preventFatigueRegen = false;
+		}
+		else {
+			float timeSinceLastSprint = (commandTime - g_sprintState.lastSprintTime) * 0.001f;
+
+			if (!g_sprintState.preventFatigueRegen &&
+				timeSinceLastSprint >= yap_sprint_fatigue_regen_delay->value.decimal) {
+
+				// Regen: frameDeltaMs * 0.001 * regen_rate
+				g_sprintState.SprintFaituge += frameTimeSec * yap_sprint_fatigue_regen_rate->value.decimal;
+				if (g_sprintState.SprintFaituge > 1.0f) {
+					g_sprintState.SprintFaituge = 1.0f;
+				}
+			}
+		}
+
+		if (developer && developer->value.integer > 1) {
+			float timeSinceLastSprint = (commandTime - g_sprintState.lastSprintTime) * 0.001f;
+			printf("Fatigue: %.3f, TimeSinceSprint: %.3f, FrameMs: %d, Sprinting: %d, PreventRegen: %d\n",
+				g_sprintState.SprintFaituge, timeSinceLastSprint, frameDeltaMs, yap_is_sprinting(), g_sprintState.preventFatigueRegen);
+		}
+	}
+
+
+
+	SafetyHookInline PM_UpdatePlayerWalkingFlagD;
+	int __fastcall PM_UpdatePlayerWalkingFlag_hook(pmove_t* pm,void* dummy1) {
+
+		auto result = PM_UpdatePlayerWalkingFlagD.unsafe_thiscall<int>(pm);
+
+		PM_UpdateSprintingFlag(pm);
+		PM_UpdateFatigue(pm);
+		return result;
+	}
+	float t[] = { -1.f,-1.f };
+	float s[] = { -1.f,-1.f };
+	uintptr_t UI_DrawHandlePic_addr = 0x4D4790;
+	void UI_DrawHandlePic_with_t(float x, float y, float w, float h, int verticalAlign, int horizontalAlign,float s0,float t0,float s1,float t1, vec4_t* color, void* shader,bool do_we = false) {
+		if (do_we) {
+			t[0] = t0;
+			t[1] = t1;
+			s[0] = s0;
+			s[1] = s1;
+		}
+		else {
+			t[0] = -1.f;
+			t[1] = -1.f;
+			s[0] = -1.f;
+			s[1] = -1.f;
+		}
+		__asm {
+			mov ebx, verticalAlign
+			mov edi, horizontalAlign
+			push shader
+			push color
+			push h
+			push w
+			push y
+			push x
+			call UI_DrawHandlePic_addr
+			add esp,0x18
+		}
+		t[0] = -1.f;
+		t[1] = -1.f;
+		s[0] = -1.f;
+		s[1] = -1.f;
+		
+
+	}
+constexpr auto GREY_MAYBE = 0.6f;
+	void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, void* shader) {
+		int ebx_og;
+		int edi_og;
+		__asm {
+			mov ebx_og, ebx
+			mov edi_og, edi
+		}
+
+		vec4_t dem_color = { GREY_MAYBE,GREY_MAYBE,GREY_MAYBE,1.f };
+
+		float fatiguePercent = g_sprintState.SprintFaituge; // 0.0 to 1.0
+
+		UI_DrawHandlePic_with_t(x, y, w, h, ebx_og, edi_og, 1.f, 1.f, 1.f, 1.f, &dem_color, shader);
+		// this down here is the white one
+		float filledHeight = h * fatiguePercent;
+		float emptyHeight = h * (1.0f - fatiguePercent);
+
+		// Start at y + emptyHeight to position at bottom, fill upwards
+		// s0=0, t0=1-fatiguePercent (skip top portion of texture), s1=1, t1=1
+		UI_DrawHandlePic_with_t(x, y + emptyHeight, w, filledHeight, ebx_og, edi_og,
+			0.f, 1.0f - fatiguePercent, 1.f, 1.f,
+			color, shader, true);
+	}
+
+	void CL_DrawStretchPic_sprint_stub_lazy(float x, float y, float width, float height, float s0, float t0, float s1, float t1, int shader, int color)
+	{
+		if (s[0] != -1.0f) {
+			s0 = s[0];
+		}
+
+		if (s[1] != -1.0f) {
+			s1 = s[1];
+		}
+
+		if (t[0] != -1.0f) {
+			t0 = t[0];
+		}
+
+		if (t[1] != -1.0f) {
+			t1 = t[1];
+		}
+
+		cdecl_call<void>(*(uintptr_t*)0x617B5C, x, y, width, height, s0, t0, s1, t1, shader, color);
+
+		// Reset to -1 after call
+		s[0] = -1.0f;
+		s[1] = -1.0f;
+		t[0] = -1.0f;
+		t[1] = -1.0f;
+	}
+	void GetMaxSpeedHack(SafetyHookContext& ctx) {
+		pmove_t* pm = (pmove_t*)(ctx.edi);
+
+		float& maxspeed = *(float*)(ctx.esp + 0x10);
+
+		if (pm && pm->ps && pm->ps->pm_flags & PMF_SPRINTING) {
+			maxspeed *= yap_player_sprintSpeedScale->value.decimal;
+		}
+
+	}
 	class component final : public component_interface
 	{
 	public:
 
 		void post_gfx() override {
 			developer = dvars::Dvar_FindVar("developer");
+
+			yap_sprint_fatigue_min_threshold = dvars::Dvar_RegisterFloat("yap_sprint_fatigue_min_threshold", 0.05f, 0.0f, 1.0f, DVAR_ARCHIVE);
+			yap_sprint_fatigue_drain_rate = dvars::Dvar_RegisterFloat("yap_sprint_fatigue_drain_rate", 0.6667f, 0.0f, 10.0f, DVAR_ARCHIVE);
+			yap_sprint_fatigue_regen_rate = dvars::Dvar_RegisterFloat("yap_sprint_fatigue_regen_rate", 0.3333f, 0.0f, 10.0f, DVAR_ARCHIVE);
+			yap_sprint_fatigue_regen_delay = dvars::Dvar_RegisterFloat("yap_sprint_fatigue_regen_delay", 1.0f, 0.0f, 10.0f, DVAR_ARCHIVE);
+
 			yap_sprint_gun_rot_p = dvars::Dvar_RegisterFloat("yap_sprint_gun_rot_p", 0.f, -FLT_MAX, FLT_MAX,0);
 			yap_sprint_gun_rot_r = dvars::Dvar_RegisterFloat("yap_sprint_gun_rot_r", 0.f, -FLT_MAX, FLT_MAX, 0);
 			yap_sprint_gun_rot_y = dvars::Dvar_RegisterFloat("yap_sprint_gun_rot_y", 0.f, -FLT_MAX, FLT_MAX, 0);
@@ -501,7 +760,8 @@ namespace sprint {
 
 			update_sprint_gun_dvars();
 			Cmd_AddCommand("reload_eweapons", loadEWeapons);
-
+			Memory::VP::Nop(0x4D485C, 6);
+			Memory::VP::InjectHook(0x4D485C, CL_DrawStretchPic_sprint_stub_lazy, Memory::VP::HookType::Call);
 		}
 
 		void post_cg_init() override {
@@ -510,6 +770,59 @@ namespace sprint {
 
 		void post_start() override {
 
+			static auto CG_CheckPlayerStanceChange = safetyhook::create_mid(0x4BE445, [](SafetyHookContext& ctx) {
+
+				static bool wasSprinting = false;
+				bool isSprinting = yap_is_sprinting();
+
+				if (isSprinting != wasSprinting) {
+					// flash the stance baby
+					ctx.ecx = 0x00002300;
+
+					// Update lastStanceChangeTime to trigger the white flash
+					int* cgTime = (int*)0xF708DC;
+					int* lastStanceChangeTime = (int*)0xF796C8;
+					*lastStanceChangeTime = *cgTime;
+
+				}
+				wasSprinting = isSprinting;
+
+				int* mask = (int*)(ctx.esp + 0x4);
+
+				if (g_sprintState.SprintFaituge != 1.f)
+					*mask = 0x00002300;
+
+				});
+
+
+			//static auto CG_CheckPlayerStanceChange1 = safetyhook::create_mid(0x4BE445, [](SafetyHookContext& ctx) {
+
+
+
+			//	});
+
+			Memory::VP::InjectHook(0x4A8142, UI_DrawHandlePic_stub);
+
+
+			//Memory::VP::Nop(0x4A8142, 5);
+			//static auto UI_DrawHandlePic_lazy_hack2 = safetyhook::create_mid(0x4A8142, [](SafetyHookContext& ctx) {
+
+			//	float* x = (float*)&ctx.edx;
+			//	float* y = (float*)&ctx.ecx;
+			//	float* w = (float*)&ctx.eax;
+			//	float* h = (float*)(ctx.esp + 0x8);
+			//	vec4_t* color = (vec4_t*)(ctx.ebp);
+			//	void* shader = (void*)*(int*)(ctx.esp + 0x14);
+
+			//	vec4_t discolor = { 0.f,1.f,1.f,1.f };
+
+			//	UI_DrawHandlePic_with_t(*x, *y, *w, *h, ctx.ebx, ctx.edi, 0, 0, 0, 0, &discolor,shader);
+
+
+			//	});
+
+
+			PM_UpdatePlayerWalkingFlagD = safetyhook::create_inline(exe(0x50BD00), PM_UpdatePlayerWalkingFlag_hook);
 			Memory::VP::InterceptCall(0x40E164, setup_binds_og, setup_binds);
 			Memory::VP::Nop(exe(0x004EC7D0), 2);
 
@@ -591,10 +904,13 @@ namespace sprint {
 				});
 
 			static auto CL_UpdateCmdButton = safetyhook::create_mid(exe(0x409AF0), [](SafetyHookContext& ctx) {
-
+				uint32_t* buttons = (uint32_t*)(ctx.eax + 0x4);
 				if (sprint.active || sprint.wasPressed) {
 					yap_activate_sprint();
 					sprint.wasPressed = false;
+					*buttons |= CMD_SPRINT;
+
+
 				}
 				else
 					yap_deactivate_sprint();
@@ -614,6 +930,22 @@ namespace sprint {
 				printf("da speed %f\n", speed);
 
 				});
+
+			static auto GetMaxSpeed_hack1 = safetyhook::create_mid(exe(0x50AB38), GetMaxSpeedHack);
+			static auto GetMaxSpeed_hack2 = safetyhook::create_mid(exe(0x50AA87), GetMaxSpeedHack);
+			// not ideal and not what UO does, it does from cmwalk but for some reason that messes up bobcycle and makes it go extra speed whyyyyyy;
+			//static auto gspeed_sprint = safetyhook::create_mid(exe(0x4E7CA8), [](SafetyHookContext& ctx) {
+
+			//	//gclient_s
+			//	playerState_t* ps = (playerState_t*)(ctx.ebp);
+
+			//	if (yap_is_sprinting()) {
+			//		float speed = (float)ps->speed;
+			//		speed *= yap_player_sprintSpeedScale->value.decimal;
+			//		ps->speed = (int)speed;
+			//	}
+
+			//	});
 
 			static auto PM_Weapon_skip = safetyhook::create_mid(exe(0x4DFDD5), [](SafetyHookContext& ctx) {
 				if (yap_is_sprinting()) {

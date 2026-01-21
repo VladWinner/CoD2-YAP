@@ -75,6 +75,15 @@
     <ClInclude Include="src\GMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\include\shared\cod2_math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\shared\cod2_player.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\shared\cod2_entity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp">

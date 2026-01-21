@@ -89,7 +89,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\include;$(ProjectDir)src\include\nlohmann;$(ProjectDir)src\loader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\include;$(ProjectDir)src\include\nlohmann;$(ProjectDir)src\loader;$(ProjectDir)src\include\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -120,7 +120,7 @@ popd</Command>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\include;$(ProjectDir)src\include\nlohmann;$(ProjectDir)src\loader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\include;$(ProjectDir)src\include\nlohmann;$(ProjectDir)src\loader;$(ProjectDir)src\include\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -189,6 +189,9 @@ popd</Command>
     <ClInclude Include="src\include\nlohmann\json.hpp" />
     <ClInclude Include="src\include\nlohmann\json_fwd.hpp" />
     <ClInclude Include="src\include\safetyhook.hpp" />
+    <ClInclude Include="src\include\shared\cod2_entity.h" />
+    <ClInclude Include="src\include\shared\cod2_math.h" />
+    <ClInclude Include="src\include\shared\cod2_player.h" />
     <ClInclude Include="src\include\Zydis.h" />
     <ClInclude Include="src\loader\component_interface.h" />
     <ClInclude Include="src\loader\component_loader.h" />
