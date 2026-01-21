@@ -60,7 +60,7 @@ namespace fov {
 			if (!cg_fovscale) {
 				cg_fovscale = dvars::Dvar_RegisterFloat("cg_fovscale", 1.f, 0.01f, 2.f, DVAR_ARCHIVE);
 				cg_fov_fix_lowfovads = dvars::Dvar_RegisterInt("cg_fov_fix_lowfovads", 1, 0, 2, DVAR_ARCHIVE);
-				cg_fov_fix_lowfovads_default_fov = dvars::Dvar_RegisterFloat("cg_fov_fix_lowfovads_default_fov", 90.f, 1.f, 160.f, DVAR_ARCHIVE);
+				cg_fov_fix_lowfovads_default_fov = dvars::Dvar_RegisterFloat("cg_fov_fix_lowfovads_default_fov", 80.f, 1.f, 160.f, DVAR_ARCHIVE);
 				Memory::VP::InterceptCall(exe(0x4AE8E1), CG_GetViewFov_ptr,CG_GetViewFov_hook);
 				Memory::VP::Nop(exe(0x004AE7EF), 6);
 				static auto WeaponADS_hack = safetyhook::create_mid(exe(0x004AE7EF), [](SafetyHookContext& ctx) {
