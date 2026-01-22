@@ -75,6 +75,10 @@ namespace fov {
 
 		}
 
+		void post_start() override {
+			Memory::VP::Patch(exe(0x4A1195 + 1), DVAR_ARCHIVE | DVAR_SCRIPTINFO);
+		}
+
 		void post_cg_init() override {
 			cg_fov = dvars::Dvar_FindVar("cg_fov");
 		}
