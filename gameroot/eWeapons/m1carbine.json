@@ -1,0 +1,14 @@
+{
+    "sprintBobH": 10.0,
+    "sprintBobV": 10.0,
+    "SprintRot": [
+        8.0,
+        65.0,
+        -15.0
+    ],
+    "SprintMove": [
+        2.0,
+        -8.0,
+        -1.0
+    ]
+}
