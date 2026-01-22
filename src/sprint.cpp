@@ -108,6 +108,8 @@ namespace sprint {
 	dvar_s* yay_sprint_gun_always_read_real;
 	dvar_s* yay_sprint_mode;
 
+	dvar_s* yay_sprint_display_icon;
+
 	void set_sprinting(bool sprinting) {
 		yap_sprint_is_sprinting->value.integer = sprinting ? 1 : 0;
 		yap_sprint_is_sprinting->latchedValue.integer = sprinting ? 1 : 0;
@@ -743,7 +745,7 @@ uintptr_t stance_sprint_shader = 0;
 
 		float fatiguePercent = g_sprintState.SprintFaituge; // 0.0 to 1.0
 
-		if (yap_is_sprinting()) {
+		if (yay_sprint_display_icon && yay_sprint_display_icon->value.integer && yap_is_sprinting()) {
 			shader = (void*)stance_sprint_shader;
 		}
 
@@ -807,7 +809,7 @@ uintptr_t stance_sprint_shader = 0;
 
 		void post_unpack() override {
 			developer = dvars::Dvar_FindVar("developer");
-
+			yay_sprint_display_icon = dvars::Dvar_RegisterInt("yap_sprint_display_icon", 1, 0, 1, DVAR_ARCHIVE, "Displays the \"stance_sprint\" material on the stance draw when sprinting");
 			yap_sprint_fatigue_min_threshold = dvars::Dvar_RegisterFloat("yap_sprint_fatigue_min_threshold", 0.05f, 0.0f, 1.0f, DVAR_ARCHIVE);
 			yap_sprint_fatigue_drain_rate = dvars::Dvar_RegisterFloat("yap_sprint_fatigue_drain_rate", (0.6667f) / 2.f, 0.0f, 10.0f, DVAR_ARCHIVE);
 			yap_sprint_fatigue_regen_rate = dvars::Dvar_RegisterFloat("yap_sprint_fatigue_regen_rate", 0.3333f, 0.0f, 10.0f, DVAR_ARCHIVE);
@@ -839,7 +841,7 @@ uintptr_t stance_sprint_shader = 0;
 
 			yay_sprint_gun_always_read_real = dvars::Dvar_RegisterInt("yap_sprint_gun_always_read_real", 0, 0, 1, 0);
 
-			yay_sprint_mode = dvars::Dvar_RegisterInt("yay_sprint_mode", 0, 0, 1, DVAR_ARCHIVE);
+			yay_sprint_mode = dvars::Dvar_RegisterInt("yap_sprint_mode", 0, 0, 1, DVAR_ARCHIVE);
 
 			yap_eweapon_semi_match = dvars::Dvar_RegisterInt("yap_eweapon_semi_match", 0, 0, 1, DVAR_ARCHIVE);
 
