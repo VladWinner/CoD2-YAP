@@ -20,13 +20,15 @@ namespace render {
 	dvar_s* r_buf_dynamicVertexBuffer_mult;
 	dvar_s* r_aspectratio_fix;
 	uintptr_t UI_DrawHandlePic_cursor_ptr;
-	int UI_DrawHandlePic_cursor(int a1, int a2, float width, float height, int a5, int a6) {
-
+	int UI_DrawHandlePic_cursor(float x, float y, float width, float height, int a5, int a6) {
 		if (r_aspectratio_fix && r_aspectratio_fix->value.integer >= 2) {
 			float scale = (4.f / 3.f) / *(float*)gfx(0x101D4CB8);
+			float original_width = width;
 			width *= scale;
+
+			x += (original_width - width) / 2.0f;
 		}
-		return cdecl_call<int>(UI_DrawHandlePic_cursor_ptr, a1, a2, width, height, a5, a6);
+		return cdecl_call<int>(UI_DrawHandlePic_cursor_ptr, x, y, width, height, a5, a6);
 	}
 
 	class component final : public component_interface
