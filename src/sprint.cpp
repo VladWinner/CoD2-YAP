@@ -62,6 +62,8 @@ namespace sprint {
 	dvar_s* yap_sprint_gun_ofs_r;
 	dvar_s* yap_sprint_gun_ofs_u;
 
+	dvar_s* yap_sprint_bind_holdbreath;
+
 	dvar_s* yap_sprint_gun_bob_horz;
 
 	dvar_s* yap_sprint_gun_bob_vert;
@@ -104,6 +106,7 @@ namespace sprint {
 	dvar_s* yap_sprint_is_sprinting;
 
 	dvar_s* yay_sprint_gun_always_read_real;
+	dvar_s* yay_sprint_mode;
 
 	void set_sprinting(bool sprinting) {
 		yap_sprint_is_sprinting->value.integer = sprinting ? 1 : 0;
@@ -348,21 +351,107 @@ namespace sprint {
 		kbutton_t* holdbreath = (kbutton_t*)0x005D20D4;
 		IN_KeyUp(holdbreath);
 		IN_SprintUp();
+	}
 
+	void IN_HoldBreath_Down() {
+		kbutton_t* holdbreath = (kbutton_t*)0x005D20D4;
+		IN_KeyDown(holdbreath);
+		if (yap_sprint_bind_holdbreath && yap_sprint_bind_holdbreath->value.integer)
+		IN_SprintDown();
+	}
 
-
+	void IN_HoldBreath_Up() {
+		kbutton_t* holdbreath = (kbutton_t*)0x005D20D4;
+		IN_KeyUp(holdbreath);
+		if(yap_sprint_bind_holdbreath && yap_sprint_bind_holdbreath->value.integer)
+		IN_SprintUp();
 	}
 
 	uintptr_t setup_binds_og;
+#define s_SPRINT_AND_BREATH "sprintbreath"
+#define s_SPRINT "sprint"
+
+	const char* custom_bindings[] = { "+" s_SPRINT_AND_BREATH , "+" s_SPRINT };
+	uintptr_t I_stricmp_addr = 0x43F6D0;
+	int I_stricmp(int idk, const char* main_string, const char* changing) {
+		int result;
+		__asm {
+			mov eax, idk
+			mov edx, main_string
+			mov ecx, changing
+			call I_stricmp_addr
+			mov result,eax
+		}
+		return result;
+	}
+
+	int I_stricmp_new_custom_bindings(int idk, const char* main_string, const char* changing) {
+
+		__asm {
+			mov idk, eax
+			mov main_string, edx
+			mov changing, ecx
+		}
+
+		bool isLastEntry = false;
+		int result = I_stricmp(0x7FFFFFFF, main_string, changing);
+
+		if (result && main_string == (const char*)0x5A51F8 || changing == (const char*)0x5A51F8) {
+			isLastEntry = true;
+		}
+
+		if (isLastEntry && result) {
+
+			for (int i = 0; i < ARRAYSIZE(custom_bindings); i++) {
+				if (I_stricmp(0x7FFFFFFF, main_string, custom_bindings[i]) == 0 ||
+					I_stricmp(0x7FFFFFFF, changing, custom_bindings[i]) == 0) {
+					result = 0;
+					break;
+				}
+			}
+		}
+
+		return result;
+	}
+
 	int setup_binds() {
 
-		Cmd_AddCommand("+sprint", IN_SprintDown);
-		Cmd_AddCommand("-sprint", IN_SprintUp);
+		Cmd_AddCommand("+" s_SPRINT, IN_SprintDown);
+		Cmd_AddCommand("-" s_SPRINT, IN_SprintUp);
 
-		Cmd_AddCommand("+sprintbreath", IN_BreathSprint_Down);
-		Cmd_AddCommand("-sprintbreath", IN_BreathSprint_Up);
+		Cmd_AddCommand("+" s_SPRINT_AND_BREATH, IN_BreathSprint_Down);
+		Cmd_AddCommand("-" s_SPRINT_AND_BREATH, IN_BreathSprint_Up);
 
 		return cdecl_call<int>(setup_binds_og);
+	}
+	uintptr_t GetKeyBindingLocal_addr = 0x4CDBF0;
+	int GetKeyBindingLocalizedString(const char* command_name, char (*string)[128]) {
+		int result;
+		__asm {
+			mov ecx, command_name
+			mov esi, string
+			call GetKeyBindingLocal_addr
+			mov result,eax
+		}
+
+		return result;
+
+	}
+
+	int GetKeyBindingLocalizedString_meleebreath_stub(const char* command_name, char (*string)[128]) {
+		int ecx_og;
+		int esi_og;
+		__asm {
+			mov ecx_og, ecx
+			mov esi_og, esi
+		}
+		//auto result = GetKeyBindingLocalizedString((const char*)ecx_og, (char (*)[128])esi_og);
+
+		//if (!result)
+			auto result = GetKeyBindingLocalizedString("+" s_SPRINT_AND_BREATH, (char (*)[128])esi_og);
+
+		return result;
+
 	}
 
 	SAFETYHOOK_NOINLINE void update_sprint_gun_dvars() {
@@ -507,16 +596,17 @@ namespace sprint {
 		if (!pm || !pm->ps)
 			return;
 		//printf("ps pm %p %p\n", pm->ps,pm);
+		auto flags = pm->ps->pm_flags;
 
-		bool tryingToMove = false;
+		bool tryingToMove = yay_sprint_mode->value.integer ? pm->cmd.forwardmove > 0 : (pm->cmd.forwardmove || pm->cmd.rightmove);
 
-		bool wantsToSprint = (pm->cmd.forwardmove || pm->cmd.rightmove) && (pm->cmd.buttons & CMD_SPRINT);
+		bool wantsToSprint = tryingToMove && (pm->cmd.buttons & CMD_SPRINT);
 
 		// Check ADS state - thing[46] is ADS fraction (0.0 = not ADS, 1.0 = full ADS)
 		float* thing = (float*)pm->ps;
 		float adsFraction = thing[46];
 		bool isADS = adsFraction >= 0.1f;
-		auto flags = pm->ps->pm_flags;
+
 		bool AllowedToSprint = !isADS && !(flags & PMF_CROUCH) && !(flags & PMF_PRONE) && !(flags & PMF_FRAG) && !(flags & PMF_MANTLE) && !(flags & PMF_LADDER);
 		if (wantsToSprint && can_sprint() && AllowedToSprint) {
 			// Activate sprinting only if not in ADS
@@ -552,6 +642,7 @@ namespace sprint {
 
 		static int lastRealTime = 0;
 
+		// How would this work in a server/MP lol this sprint is really only meant for SP... atm
 		int realTime = *(int*)0xF708DC; // cgameGlob->time
 
 		if (lastRealTime == 0) {
@@ -742,9 +833,13 @@ constexpr auto GREY_MAYBE = 0.6f;
 
 			yay_sprint_gun_always_read_real = dvars::Dvar_RegisterInt("yap_sprint_gun_always_read_real", 0, 0, 1, 0);
 
+			yay_sprint_mode = dvars::Dvar_RegisterInt("yay_sprint_mode", 0, 0, 1, DVAR_ARCHIVE);
+
 			yap_eweapon_semi_match = dvars::Dvar_RegisterInt("yap_eweapon_semi_match", 0, 0, 1, DVAR_ARCHIVE);
 
 			yap_player_sprintSpeedScale = dvars::Dvar_RegisterFloat("yap_player_sprintSpeedScale", 1.6f, 0.f, FLT_MAX,DVAR_ARCHIVE);
+
+			yap_sprint_bind_holdbreath = dvars::Dvar_RegisterInt("yap_sprint_bind_holdbreath", 1, 0, 1, DVAR_ARCHIVE);
 
 			update_sprint_gun_dvars();
 			Cmd_AddCommand("reload_eweapons", loadEWeapons);
@@ -758,6 +853,10 @@ constexpr auto GREY_MAYBE = 0.6f;
 
 		void post_start() override {
 
+			Memory::VP::Patch<void*>(exe((0x40A1A0 + 1)), IN_HoldBreath_Down);
+			Memory::VP::Patch<void*>(exe((0x40A1AF + 1)), IN_HoldBreath_Up);
+			//Memory::VP::InjectHook(0x4A9EE7, GetKeyBindingLocalizedString_meleebreath_stub);
+			Memory::VP::InjectHook(0x4CDB5B, I_stricmp_new_custom_bindings);
 			static auto CG_CheckPlayerStanceChange = safetyhook::create_mid(0x4BE445, [](SafetyHookContext& ctx) {
 
 				bool isSprinting = yap_is_sprinting();
