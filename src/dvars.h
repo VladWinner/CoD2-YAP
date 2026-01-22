@@ -85,10 +85,30 @@ typedef struct dvar_s
 } dvar_t;
 
 namespace dvars {
+    inline std::unordered_map<std::string, std::string> descriptions_runtime;
+    WEAK game::symbol<dvar_s* (const char*, int, int, int, uint16_t)> Dvar_RegisterInt_Original{ 0x431FC0 };
+    WEAK game::symbol<dvar_s* (const char*, float, float, float, uint16_t)> Dvar_RegisterFloat_Original{ 0x432020 };
+    WEAK game::symbol<dvar_s* (const char*, float, float, float, float, uint16_t)> Dvar_RegisterVec2_Original{ 0x4320A0 };
+    WEAK game::symbol<dvar_s* (const char*)> Dvar_FindVar{ 0x431260 };
 
-    WEAK game::symbol<dvar_s*(const char* name, int value, int min, int max, uint16_t flags)> Dvar_RegisterInt{ 0x431FC0 };
-    WEAK game::symbol<dvar_s* (const char* name, float value, float min, float max, uint16_t flags)> Dvar_RegisterFloat{ 0x432020 };
-    WEAK game::symbol<dvar_s* (const char* name, float x, float y,float min, float max, uint16_t flags)> Dvar_RegisterVec2{ 0x4320A0 };
+    inline dvar_s* Dvar_RegisterInt(const char* name, int value, int min, int max, uint16_t flags, const char* description = nullptr) {
+        if (description && description[0] != '\0') {
+            descriptions_runtime[name] = description;
+        }
+        return Dvar_RegisterInt_Original(name, value, min, max, flags);
+    }
 
-    WEAK game::symbol<dvar_s* (const char* name)> Dvar_FindVar{ 0x431260 };
+    inline dvar_s* Dvar_RegisterFloat(const char* name, float value, float min, float max, uint16_t flags, const char* description = nullptr) {
+        if (description && description[0] != '\0') {
+            descriptions_runtime[name] = description;
+        }
+        return Dvar_RegisterFloat_Original(name, value, min, max, flags);
+    }
+
+    inline dvar_s* Dvar_RegisterVec2(const char* name, float x, float y, float min, float max, uint16_t flags, const char* description = nullptr) {
+        if (description && description[0] != '\0') {
+            descriptions_runtime[name] = description;
+        }
+        return Dvar_RegisterVec2_Original(name, x, y, min, max, flags);
+    }
 }

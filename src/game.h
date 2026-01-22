@@ -177,11 +177,11 @@ namespace game
 }
 
 namespace game {
-	//void __cdecl Cmd_AddCommand(const char* command_name, void* function);
+	//void __cdecl game::Cmd_AddCommand(const char* command_name, void* function);
 
 	//WEAK symbol<qhandle_t> whiteShader{ 0x48422E8 };
 
-
+	WEAK symbol<void(const char* command_name, void(__cdecl* function)())> Cmd_AddCommand{ 0x41BB00 };
 
 
 

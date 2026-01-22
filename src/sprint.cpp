@@ -306,13 +306,6 @@ namespace sprint {
 		}
 	}
 
-	void __cdecl Cmd_AddCommand(const char* command_name, void(__cdecl* function)()) {
-		if (developer && developer->value.integer)
-		printf("command name %s func %p\n", command_name, function);
-
-		cdecl_call(0x41BB00, command_name, function);
-	}
-
 	void ESICall(void* arg1,uintptr_t addr) {
 		__asm {
 			pushad
@@ -416,11 +409,11 @@ namespace sprint {
 
 	int setup_binds() {
 
-		Cmd_AddCommand("+" s_SPRINT, IN_SprintDown);
-		Cmd_AddCommand("-" s_SPRINT, IN_SprintUp);
+		game::Cmd_AddCommand("+" s_SPRINT, IN_SprintDown);
+		game::Cmd_AddCommand("-" s_SPRINT, IN_SprintUp);
 
-		Cmd_AddCommand("+" s_SPRINT_AND_BREATH, IN_BreathSprint_Down);
-		Cmd_AddCommand("-" s_SPRINT_AND_BREATH, IN_BreathSprint_Up);
+		game::Cmd_AddCommand("+" s_SPRINT_AND_BREATH, IN_BreathSprint_Down);
+		game::Cmd_AddCommand("-" s_SPRINT_AND_BREATH, IN_BreathSprint_Up);
 
 		return cdecl_call<int>(setup_binds_og);
 	}
@@ -802,7 +795,7 @@ uintptr_t stance_sprint_shader = 0;
 		}
 
 	}
-
+	uint32_t default_material = -1;
 	int CL_RegisterMaterial(const char* material_name, int unk1, int unk2) {
 		return cdecl_call<int>(*(uintptr_t*)0x617AC0, material_name, unk1, unk2);
 
@@ -855,7 +848,7 @@ uintptr_t stance_sprint_shader = 0;
 			yap_sprint_bind_holdbreath = dvars::Dvar_RegisterInt("yap_sprint_bind_holdbreath", 1, 0, 1, DVAR_ARCHIVE);
 
 			update_sprint_gun_dvars();
-			Cmd_AddCommand("reload_eweapons", loadEWeapons);
+			game::Cmd_AddCommand("reload_eweapons", loadEWeapons);
 			Memory::VP::Nop(0x4D485C, 6);
 			Memory::VP::InjectHook(0x4D485C, CL_DrawStretchPic_sprint_stub_lazy, Memory::VP::HookType::Call);
 		}
@@ -867,8 +860,10 @@ uintptr_t stance_sprint_shader = 0;
 		void post_start() override {
 
 			static auto registering_graphics = safetyhook::create_mid(0x4A2ECE, [](SafetyHookContext& ctx) {
-				auto default_mat = CL_RegisterMaterial("&default", 3, 7);
+				default_material = CL_RegisterMaterial("$default", 3, 7);
 				stance_sprint_shader = CL_RegisterMaterial("stance_sprint", 3, 7);
+				if (stance_sprint_shader == default_material)
+					stance_sprint_shader = 0;
 				printf("SPRINTING IS UHHH %d\n", stance_sprint_shader);
 
 

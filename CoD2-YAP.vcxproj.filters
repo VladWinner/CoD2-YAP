@@ -84,6 +84,9 @@
     <ClInclude Include="src\include\shared\cod2_entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\dvar_descriptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp">
@@ -120,6 +123,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\fov.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
