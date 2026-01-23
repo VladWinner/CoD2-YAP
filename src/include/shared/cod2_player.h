@@ -247,25 +247,22 @@ struct pmove_t
 	int mantleDuration;
 };
 
+
 struct pml_t
 {
 	vec3_t forward;
 	vec3_t right;
 	vec3_t up;
 	float frametime;
-	int msec;
-	int walking;
-	int groundPlane;
-	int almostGroundPlane;
+	uint32_t msec;
+	uint32_t walking;
+	uint32_t groundPlane;
 	trace_t groundTrace;
-	float impactSpeed;
+	uint32_t impactSpeed;
 	vec3_t previous_origin;
 	vec3_t previous_velocity;
-	unsigned int holdrand;
+	uint32_t previous_waterlevel;
 };
-
-
-
 
 
 

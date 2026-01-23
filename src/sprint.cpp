@@ -686,13 +686,46 @@ namespace sprint {
 
 
 	SafetyHookInline PM_UpdatePlayerWalkingFlagD;
-	int __fastcall PM_UpdatePlayerWalkingFlag_hook(pmove_t* pm,void* dummy1) {
 
+
+	SafetyHookInline PM_UpdateAimDownSightFlagD;
+
+	void PM_UpdateAimDownSightFlag(pml_t* pml, pmove_t* pm) {
+		auto func = PM_UpdateAimDownSightFlagD.original<void*>();
+		__asm {
+			pushad
+			mov edi, pm
+			mov eax, pml
+			call func
+			popad
+		}
+	}
+
+	void __stdcall PM_UpdateAimDownSightFlag_detour(pml_t* pml, pmove_t* pm) {
+		PM_UpdateAimDownSightFlag(pml, pm);
 		auto result = PM_UpdatePlayerWalkingFlagD.unsafe_thiscall<int>(pm);
 
 		PM_UpdateSprintingFlag(pm);
 		PM_UpdateFatigue(pm);
-		return result;
+
+	}
+
+	void PM_UpdateAimDownSightFlag_stub() {
+
+		__asm
+		{
+			push edi
+			push eax
+			call PM_UpdateAimDownSightFlag_detour
+		}
+
+	}
+
+	int __fastcall PM_UpdatePlayerWalkingFlag_hook(pmove_t* pm,void* dummy1) {
+		return 0;
+		
+
+
 	}
 	float t[] = { -1.f,-1.f };
 	float s[] = { -1.f,-1.f };
@@ -803,6 +836,8 @@ uintptr_t stance_sprint_shader = 0;
 
 	}
 
+
+
 	class component final : public component_interface
 	{
 	public:
@@ -860,6 +895,8 @@ uintptr_t stance_sprint_shader = 0;
 		}
 
 		void post_start() override {
+
+			PM_UpdateAimDownSightFlagD = safetyhook::create_inline(exe(0x4DD020), PM_UpdateAimDownSightFlag_stub);
 
 			static auto registering_graphics = safetyhook::create_mid(0x4A2ECE, [](SafetyHookContext& ctx) {
 				default_material = CL_RegisterMaterial("$default", 3, 7);
