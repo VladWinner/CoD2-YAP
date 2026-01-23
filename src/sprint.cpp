@@ -70,6 +70,10 @@ namespace sprint {
 
 	dvar_s* yap_sprint_weaponBobAmplitudeSprinting;
 
+	dvar_s* yap_sprint_bobAmplitudeSprinting;
+
+	dvar_s* yap_sprintCameraBob;
+
 	dvar_s* yap_sprint_internal_yet;
 
 	dvar_s* yap_player_sprintSpeedScale;
@@ -551,7 +555,7 @@ namespace sprint {
 		};
 	}
 
-	double __cdecl CG_GetWeaponVerticalBobFactor(float a1, float a2, float a3)
+	double __cdecl CG_GetWeaponVerticalBobFactor_sprint(float a1, float a2, float a3)
 	{
 		double v3; // st7
 		double v4; // st7
@@ -585,6 +589,78 @@ namespace sprint {
 		if (v4 > a3)
 			v6 = a3;
 		return (sin(a1 * 4.0 + 1.5707964) * 0.2 + sin(a1 + a1)) * v6 * 0.75;
+	}
+
+
+	double __cdecl CG_GetVerticalBobFactor_sprint(float a1, float a2, float a3)
+	{
+		double v3; // st7
+		double v4; // st7
+		float v6; // [esp+0h] [ebp-4h]
+
+
+
+		if (*(uintptr_t*)exe(0xF709B8) == 11)
+		{
+			v3 = dvars::Dvar_FindVar("bg_bobAmplitudeProne")->value.decimal;
+		}
+		else if (*(uintptr_t*)exe(0xF709B8) == 40)
+		{
+			v3 = dvars::Dvar_FindVar("bg_bobAmplitudeDucked")->value.decimal;
+		}
+		else
+		{
+			v3 = dvars::Dvar_FindVar("bg_bobAmplitudeStanding")->value.decimal;
+		}
+
+		if (yap_is_sprinting()) {
+
+			float vert_bob = yap_sprint_bobAmplitudeSprinting->value.vec2->y;
+			v3 = vert_bob;
+
+
+		}
+
+		v4 = v3 * a2;
+		v6 = v4;
+		if (v4 > a3)
+			v6 = a3;
+		return (sin(a1 * 4.0 + 1.5707964) * 0.2 + sin(a1 + a1)) * v6 * 0.75;
+	}
+
+	double __cdecl CG_GetViewGetHorizontalBob_sprint(float a1, float a2, float a3)
+	{
+		double v3; // st7
+		double v4; // st7
+		float v6; // [esp+0h] [ebp-4h]
+
+
+
+		if (*(uintptr_t*)exe(0xF709B8) == 11)
+		{
+			v3 = dvars::Dvar_FindVar("bg_bobAmplitudeProne")->value.decimal;
+		}
+		else if (*(uintptr_t*)exe(0xF709B8) == 40)
+		{
+			v3 = dvars::Dvar_FindVar("bg_bobAmplitudeDucked")->value.decimal;
+		}
+		else
+		{
+			v3 = dvars::Dvar_FindVar("bg_bobAmplitudeStanding")->value.decimal;
+		}
+
+		if (yap_is_sprinting()) {
+
+			v3 = yap_sprint_bobAmplitudeSprinting->value.vec2->x;
+
+
+		}
+
+		v4 = v3 * a2;
+		v6 = v4;
+		if (v4 > a3)
+			v6 = a3;
+		return v6 * sin(a1);
 	}
 
 	void PM_UpdateSprintingFlag(pmove_t* pm) {
@@ -836,8 +912,6 @@ uintptr_t stance_sprint_shader = 0;
 
 	}
 
-
-
 	class component final : public component_interface
 	{
 	public:
@@ -869,8 +943,8 @@ uintptr_t stance_sprint_shader = 0;
 
 			yap_sprint_internal_yet = dvars::Dvar_RegisterInt("yap_sprint_internal_yet", 0, 0, 0, DVAR_ROM);
 
-			yap_sprint_weaponBobAmplitudeSprinting = dvars::Dvar_RegisterVec2("yap_sprint_weaponBobAmplitudeSprinting", 0.02f, 0.014f, 0.0f, 1.f, 0);
-
+			yap_sprint_weaponBobAmplitudeSprinting = dvars::Dvar_RegisterVec2("yap_sprint_weaponBobAmplitudeSprinting", 0.02f, 0.014f, 0.0f, 1.f, DVAR_ARCHIVE);
+			yap_sprint_bobAmplitudeSprinting = dvars::Dvar_RegisterVec2("yap_sprint_bobAmplitudeSprinting", 0.02f, 0.014f, 0.0f, 1.f, DVAR_ARCHIVE);
 			yap_sprint_trying = dvars::Dvar_RegisterInt("yap_sprint_trying", 0, 0, 1, DVAR_ROM);
 			yap_sprint_is_sprinting = dvars::Dvar_RegisterInt("yap_sprint_is_sprinting", 0, 0, 1, 0);
 
@@ -880,9 +954,11 @@ uintptr_t stance_sprint_shader = 0;
 
 			yap_eweapon_semi_match = dvars::Dvar_RegisterInt("yap_eweapon_semi_match", 0, 0, 1, DVAR_ARCHIVE);
 
-			yap_player_sprintSpeedScale = dvars::Dvar_RegisterFloat("yap_player_sprintSpeedScale", 1.6f, 0.f, FLT_MAX,DVAR_ARCHIVE);
+			yap_player_sprintSpeedScale = dvars::Dvar_RegisterFloat("yap_player_sprintSpeedScale", 1.6f, 0.f, FLT_MAX,DVAR_ARCHIVE,"The scale applied to the player speed when sprinting");
 
 			yap_sprint_bind_holdbreath = dvars::Dvar_RegisterInt("yap_sprint_bind_holdbreath", 1, 0, 1, DVAR_ARCHIVE);
+
+			yap_sprintCameraBob = dvars::Dvar_RegisterFloat("yap_sprintCameraBob", 0.f, 0.f, 2.f, DVAR_ARCHIVE, "The speed the camera bobs while you sprint");
 
 			update_sprint_gun_dvars();
 			game::Cmd_AddCommand("reload_eweapons", loadEWeapons);
@@ -1027,7 +1103,10 @@ uintptr_t stance_sprint_shader = 0;
 
 
 
-			Memory::VP::InjectHook(exe(0x004B4B04), CG_GetWeaponVerticalBobFactor);
+			Memory::VP::InjectHook(exe(0x004B4B04), CG_GetWeaponVerticalBobFactor_sprint);
+
+			static auto bobsprint_hook = safetyhook::create_inline(0x4AE010, CG_GetViewGetHorizontalBob_sprint);
+			static auto vertsprint_hook = safetyhook::create_inline(0x4ADF90, CG_GetVerticalBobFactor_sprint);
 
 			Memory::VP::Nop(exe(0x004B4B4B), 3);
 
@@ -1076,6 +1155,22 @@ uintptr_t stance_sprint_shader = 0;
 
 			static auto GetMaxSpeed_hack1 = safetyhook::create_mid(exe(0x50AB38), GetMaxSpeedHack);
 			static auto GetMaxSpeed_hack2 = safetyhook::create_mid(exe(0x50AA87), GetMaxSpeedHack);
+
+			// Usage:
+			static auto BobCycleSpeed = safetyhook::create_mid(exe(0x50ABC6), [](SafetyHookContext& ctx) {
+				if (yap_is_sprinting() && yap_sprintCameraBob->value.decimal != 0.f) {
+					X87Context x87;
+					float maxspeed = *(float*)(ctx.esp + 0x10);
+					float xyspeed = *(float*)(ctx.edi + 0x104);
+
+					float newBob = xyspeed / maxspeed * yap_sprintCameraBob->value.decimal;
+
+					x87.writeST(1, newBob);
+
+
+					x87.apply();
+				}
+				});
 			// not ideal and not what UO does, it does from cmwalk but for some reason that messes up bobcycle and makes it go extra speed whyyyyyy;
 			//static auto gspeed_sprint = safetyhook::create_mid(exe(0x4E7CA8), [](SafetyHookContext& ctx) {
 
