@@ -86,6 +86,8 @@ namespace sprint {
 
 	dvar_s* yap_player_sprintSpeedScale;
 
+	dvar_s* yap_player_sprintStrafeSpeedScale;
+
 	// Fake dvars for eWeapon values
 	dvar_s yap_sprint_gun_rot_p_fake;
 	dvar_s yap_sprint_gun_rot_r_fake;
@@ -919,6 +921,15 @@ uintptr_t stance_sprint_shader = 0;
 		return cdecl_call<int>(*(uintptr_t*)0x617AC0, material_name, unk1, unk2);
 
 	}
+	uintptr_t PM_WalkMove_og;
+	int PM_WalkMove(pmove_t* pm, pml_t* pml) {
+		if (pm->ps->pm_flags & PMF_SPRINTING) {
+			pm->cmd.rightmove = (int)(float)((float)pm->cmd.rightmove * yap_player_sprintStrafeSpeedScale->value.decimal);
+		}
+
+		return cdecl_call<int>(PM_WalkMove_og, pm, pml);
+
+	}
 
 	class component final : public component_interface
 	{
@@ -958,11 +969,13 @@ uintptr_t stance_sprint_shader = 0;
 
 			yay_sprint_gun_always_read_real = dvars::Dvar_RegisterInt("yap_sprint_gun_always_read_real", 0, 0, 1, 0);
 
-			yay_sprint_mode = dvars::Dvar_RegisterInt("yap_sprint_mode", 0, 0, 1, DVAR_ARCHIVE);
+			yay_sprint_mode = dvars::Dvar_RegisterInt("yap_sprint_mode", 0, 0, 1, DVAR_ARCHIVE,"0 = Allow sprinting omnidirectionally like in United Offensive\n1 = Only allow sprinting when at least moving forward like IW3+");
 
 			yap_eweapon_semi_match = dvars::Dvar_RegisterInt("yap_eweapon_semi_match", 0, 0, 1, DVAR_ARCHIVE);
 
 			yap_player_sprintSpeedScale = dvars::Dvar_RegisterFloat("yap_player_sprintSpeedScale", 1.6f, 0.f, FLT_MAX,DVAR_ARCHIVE,"The scale applied to the player speed when sprinting");
+
+			yap_player_sprintStrafeSpeedScale = dvars::Dvar_RegisterFloat("yap_player_sprintStrafeSpeedScale", 0.667, 0.01f, 1.f, DVAR_ARCHIVE, "The speed at which you can strafe while sprinting");
 
 			yap_sprint_bind_holdbreath = dvars::Dvar_RegisterInt("yap_sprint_bind_holdbreath", 1, 0, 1, DVAR_ARCHIVE);
 
@@ -1029,6 +1042,8 @@ uintptr_t stance_sprint_shader = 0;
 
 
 			//	});
+
+			Memory::VP::InterceptCall(exe(0x50CACF), PM_WalkMove_og, PM_WalkMove);
 
 			Memory::VP::InjectHook(0x4A8142, UI_DrawHandlePic_stub);
 
