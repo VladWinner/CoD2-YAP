@@ -30,6 +30,12 @@ struct kbutton_t
 	int8_t wasPressed;
 };
 
+__declspec(naked) void retptr() {
+	__asm {
+		ret
+	}
+}
+
 namespace sprint {
 
 	struct state {
@@ -73,6 +79,8 @@ namespace sprint {
 	dvar_s* yap_sprint_bobAmplitudeSprinting;
 
 	dvar_s* yap_sprintCameraBob;
+
+	dvar_s* yap_sprint_allow_start_reload;
 
 	dvar_s* yap_sprint_internal_yet;
 
@@ -960,6 +968,8 @@ uintptr_t stance_sprint_shader = 0;
 
 			yap_sprintCameraBob = dvars::Dvar_RegisterFloat("yap_sprintCameraBob", 0.f, 0.f, 2.f, DVAR_ARCHIVE, "The speed the camera bobs while you sprint");
 
+			yap_sprint_allow_start_reload = dvars::Dvar_RegisterInt("yap_sprint_allow_start_reload", 0, 0, 1, DVAR_ARCHIVE, "Turning this on allows you to initiate a reload while sprinting.");
+
 			update_sprint_gun_dvars();
 			game::Cmd_AddCommand("reload_eweapons", loadEWeapons);
 			Memory::VP::Nop(0x4D485C, 6);
@@ -1188,6 +1198,14 @@ uintptr_t stance_sprint_shader = 0;
 			static auto PM_Weapon_skip = safetyhook::create_mid(exe(0x4DFDD5), [](SafetyHookContext& ctx) {
 				if (yap_is_sprinting()) {
 					ctx.eax = 1;
+				}
+
+				});
+
+			static auto PM_BeginWeaponReload_skip = safetyhook::create_mid(exe(0x4DE497), [](SafetyHookContext& ctx) {
+				playerState_t* ps = (playerState_t*)(ctx.eax);
+				if (yap_sprint_allow_start_reload->value.integer == 0 && ps->pm_flags & PMF_SPRINTING) {
+					ctx.eip = (uintptr_t)&retptr;
 				}
 
 				});
