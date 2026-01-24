@@ -49,33 +49,52 @@ const char* SDLLP::DetermineLibrary()
 
 	Log("[SDLLP] Determining target library.");
 
+	// Get the name of the current DLL
+	CHAR currentDllPath[MAX_PATH];
+	HMODULE hModule = NULL;
 
-		Log("[SDLLP] d3d9Hooked enabled in configuration.");
+	// Get the handle to THIS DLL
+	GetModuleHandleExA(
+		GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+		(LPCSTR)&DetermineLibrary,
+		&hModule
+	);
 
-		// Check for d3d9Hooked.dll in the game directory
-		CHAR mPath[MAX_PATH];
-		GetModuleDirectory(mPath, MAX_PATH);
-		strcat_s(mPath, "d3d9Hooked.dll");
+	GetModuleFileNameA(hModule, currentDllPath, MAX_PATH);
 
-		if (GetFileAttributesA(mPath) != INVALID_FILE_ATTRIBUTES)
-		{
-			Log("[SDLLP] d3d9Hooked.dll found in game directory, using d3d9Hooked.");
-			mTargetLibrary = "d3d9Hooked.dll";
-			return mTargetLibrary;
-		}
+	// Extract just the filename
+	char* fileName = strrchr(currentDllPath, '\\');
+	if (fileName) fileName++; // Move past the backslash
+	else fileName = currentDllPath;
 
-		Log("[SDLLP] d3d9Hooked.dll not found, falling back to d3d9.dll.");
-	
+	// Remove the .dll extension to get base name
+	char baseName[MAX_PATH];
+	strcpy_s(baseName, fileName);
+	char* dotPos = strrchr(baseName, '.');
+	if (dotPos) *dotPos = '\0';
 
-	mTargetLibrary = "d3d9.dll";
+	// Construct the "Hooked" variant name
+	char hookedName[MAX_PATH];
+	sprintf_s(hookedName, "%sHooked.dll", baseName);
+
+	Log("[SDLLP] Current DLL: %s, checking for hooked variant: %s", fileName, hookedName);
+
+	// Check for the hooked version in the game directory
+	CHAR hookedPath[MAX_PATH];
+	GetModuleDirectory(hookedPath, MAX_PATH);
+	strcat_s(hookedPath, hookedName);
+
+	if (GetFileAttributesA(hookedPath) != INVALID_FILE_ATTRIBUTES)
+	{
+		Log("[SDLLP] %s found in game directory, using hooked variant.", hookedName);
+		mTargetLibrary = _strdup(hookedName);
+		return mTargetLibrary;
+	}
+
+	Log("[SDLLP] %s not found, falling back to %s.", hookedName, fileName);
+
+	mTargetLibrary = _strdup(fileName);
 	return mTargetLibrary;
-}
-
-// Get the target library name
-// --------------------------------------+
-const char* SDLLP::GetTargetLibrary()
-{
-	return DetermineLibrary();
 }
 
 // Load necessary library
@@ -85,15 +104,19 @@ void SDLLP::LoadLibrary(const char* library)
 	Log("[SDLLP] Loading library '%s'.", library);
 	CHAR mPath[MAX_PATH];
 
-	// For d3d9Hooked.dll, load from game directory
-	if (strcmp(library, "d3d9Hooked.dll") == 0)
+	// Check if this is a "Hooked" variant (ends with "Hooked.dll") - case insensitive
+	size_t len = strlen(library);
+	bool isHooked = (len > 10 && _stricmp(library + len - 10, "Hooked.dll") == 0);
+
+	if (isHooked)
 	{
+		// For hooked variants, load from game directory
 		GetModuleDirectory(mPath, MAX_PATH);
 		strcat_s(mPath, library);
 	}
-	// For d3d9.dll, load from system directory
 	else
 	{
+		// For standard system libraries, load from system directory
 		GetSystemDirectoryA(mPath, MAX_PATH);
 		strcat_s(mPath, "\\");
 		strcat_s(mPath, library);
@@ -108,6 +131,11 @@ void SDLLP::LoadLibrary(const char* library)
 bool SDLLP::IsLibraryLoaded(const char* library)
 {
 	return (mLibraries.find(library) != mLibraries.end() && mLibraries[library]);
+}
+
+const char* SDLLP::GetTargetLibrary()
+{
+	return DetermineLibrary();
 }
 
 // Get export address
@@ -144,3 +172,11 @@ void SDLLP::Log(const char* message, ...)
 EXPORT(D3DPERF_BeginEvent)
 EXPORT(D3DPERF_EndEvent)
 EXPORT(Direct3DCreate9)
+
+EXPORT(WSAGetLastError)
+EXPORT(inet_addr)
+EXPORT(gethostbyname)
+
+EXPORT(timeBeginPeriod)
+EXPORT(timeGetTime)
+EXPORT(timeEndPeriod)
