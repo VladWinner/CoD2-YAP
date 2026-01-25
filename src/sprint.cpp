@@ -21,6 +21,16 @@
 #define CMD_SPRINT (1 << 31)
 #define PMF_SPRINTING CMD_SPRINT
 
+#define MENU_DEBUG_PRINT(format, ...) \
+    do { \
+if(!dvars::developer){ \
+dvars::developer = dvars::Dvar_FindVar("developer"); \
+} \
+        if (dvars::developer && dvars::developer->value.integer >= 2) { \
+            printf(format, ##__VA_ARGS__); \
+        } \
+    } while(0)
+
 struct kbutton_t
 {
 	uint64_t down;
@@ -84,6 +94,8 @@ namespace sprint {
 	dvar_s* yap_sprintCameraBob;
 
 	dvar_s* yap_sprint_allow_start_reload;
+
+	dvar_s* yap_sprint_enable;
 
 	dvar_s* yap_sprint_internal_yet;
 
@@ -682,7 +694,12 @@ namespace sprint {
 	void PM_UpdateSprintingFlag(pmove_t* pm) {
 		if (!pm || !pm->ps)
 			return;
-		//printf("ps pm %p %p\n", pm->ps,pm);
+
+		if (!yap_sprint_enable || yap_sprint_enable->value.integer == 0) {
+			pm->ps->pm_flags &= ~PMF_SPRINTING;
+			set_sprinting(false);
+			return;
+		}
 		auto flags = pm->ps->pm_flags;
 
 		bool tryingToMove = yay_sprint_mode->value.integer ? pm->cmd.forwardmove > 0 : (pm->cmd.forwardmove || pm->cmd.rightmove);
@@ -731,6 +748,10 @@ namespace sprint {
 	void PM_UpdateFatigue(pmove_t* pm) {
 		if (!pm || !pm->ps)
 			return;
+
+		if (!yap_sprint_enable || yap_sprint_enable->value.integer == 0) {
+			return;
+		}
 
 		static int lastRealTime = 0;
 
@@ -1096,7 +1117,9 @@ uintptr_t stance_sprint_shader = 0;
 			yap_sprint_gun_bob_horz = dvars::Dvar_RegisterFloat("yap_sprint_gun_bob_horz", 0.f, -FLT_MAX, FLT_MAX, 0);
 			yap_sprint_gun_bob_vert = dvars::Dvar_RegisterFloat("yap_sprint_gun_bob_horz", 0.f, -FLT_MAX, FLT_MAX, 0);
 
-			yap_sprint_internal_yet = dvars::Dvar_RegisterInt("yap_sprint_internal_yet", 0, 0, 0, DVAR_ROM);
+			yap_sprint_internal_yet = dvars::Dvar_RegisterInt("yap_sprint_internal_yet", 1, 0, 1, DVAR_ROM);
+
+			yap_sprint_enable = dvars::Dvar_RegisterInt("yap_sprint_enable", 1, 0, 1, DVAR_ARCHIVE, "Enables an engine-native sprint\nrequires binding +sprintbreath or +sprint");
 
 			yap_sprint_weaponBobAmplitudeSprinting = dvars::Dvar_RegisterVec2("yap_sprint_weaponBobAmplitudeSprinting", 0.02f, 0.014f, 0.0f, 1.f, DVAR_ARCHIVE);
 			yap_sprint_bobAmplitudeSprinting = dvars::Dvar_RegisterVec2("yap_sprint_bobAmplitudeSprinting", 0.02f, 0.014f, 0.0f, 1.f, DVAR_ARCHIVE);
@@ -1152,6 +1175,10 @@ uintptr_t stance_sprint_shader = 0;
 			Memory::VP::InjectHook(0x4A9EE7, GetKeyBindingLocalizedString_meleebreath_stub);
 
 			static auto CG_CheckPlayerStanceChange = safetyhook::create_mid(0x4BE445, [](SafetyHookContext& ctx) {
+
+				if (!yap_sprint_enable || yap_sprint_enable->value.integer == 0) {
+					return;
+				}
 
 				bool isSprinting = yap_is_sprinting();
 
@@ -1267,60 +1294,171 @@ uintptr_t stance_sprint_shader = 0;
 
 				});
 
-			//static auto menu_parse_item = safetyhook::create_mid(exe(0x4D382A), [](SafetyHookContext& ctx) {
-			//	return;
-			//	menuDef_t* menu = (menuDef_t*)(ctx.ebx);
-			//	if (menu && menu->window.name && !strcmp(menu->window.name, "options_shoot")) {
-			//		printf("name %s items %d\n", menu->window.name, menu->itemCount);
+			// Helper function to insert an item at a specific position
+			auto insertMenuItem = [](menuDef_t* menu, itemDef_s* newItem, int insertIndex, int& keyBindStatusIndex) {
+				// Shift all items after insertIndex forward by one
+				for (int i = menu->itemCount; i > insertIndex; i--) {
+					menu->items[i] = menu->items[i - 1];
+				}
 
-			//		int lastButtonIndex = -1;
+				// Insert the new item
+				menu->items[insertIndex] = newItem;
+				menu->itemCount++;
 
-			//		for (int i = 0; i < menu->itemCount; i++) {
-			//			if (menu->items[i]->mouseExit) {
-			//				printf("mouse exit is uh %s type %d\n", menu->items[i]->mouseExit, menu->items[i]->type);
-			//			}
-			//			if (menu->items[i]->type == ITEM_TYPE_BUTTON && menu->items[i]->text) {
-			//				printf("dat BUTTON BE %s %p\n\n\n\n", menu->items[i]->text, menu->items[i]->dvar);
-			//				lastButtonIndex = i;
-			//			}
-			//			if (menu->items[i]->text) {
-			//				if (!strcmp("@MENU_AIM_DOWN_THE_SIGHT", menu->items[i]->text)) {
-			//					printf("dat POINTER BE %p\n\n\n\n", menu->items[i]);
-			//					for (int j = 0; j < 4; j++) {
-			//						auto rect = menu->items[i]->window.rect;
-			//						printf("%d %p rect %f %f\n", j, &rect[j].x, rect[j].x, rect[j].y);
-			//					}
-			//				}
-			//			}
-			//		}
+				// Update keyBindStatusIndex if it was shifted
+				if (keyBindStatusIndex >= insertIndex) {
+					keyBindStatusIndex++;
+				}
 
-			//		// If we found a button, duplicate it
-			//		if (lastButtonIndex != -1) {
-			//			// Allocate new itemDef_s
-			//			itemDef_s* newItem = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+				MENU_DEBUG_PRINT("Inserted item at index %d, itemCount now %d, keyBindStatus now at %d\n",
+					insertIndex, menu->itemCount, keyBindStatusIndex);
+				};
 
-			//			// Copy the original item
-			//			memcpy(newItem, menu->items[lastButtonIndex], sizeof(itemDef_s));
+			static auto menu_parse_item = safetyhook::create_mid(exe(0x4D382A), [](SafetyHookContext& ctx) {
+				menuDef_t* menu = (menuDef_t*)(ctx.ebx);
+				if (menu && menu->window.name && !strcmp(menu->window.name, "options_shoot")) {
+					MENU_DEBUG_PRINT("name %s items %d\n", menu->window.name, menu->itemCount);
+					int lastButtonIndex = -1;
+					int lastBindIndex = -1;
+					int keyBindStatusIndex = -1;
 
-			//			// Allocate and set new text
-			//			newItem->text = game::String_Alloc("Sprint/Hold Breath");
+					auto insertMenuItem = [&](itemDef_s* newItem, int insertIndex) {
+						MENU_DEBUG_PRINT("  [insertMenuItem] Inserting at index %d, current itemCount=%d\n", insertIndex, menu->itemCount);
+						if (keyBindStatusIndex != -1) {
+							MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus BEFORE shift: rect.y=%f (at index %d)\n",
+								menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
+						}
 
-			//			// Shift all items after lastButtonIndex forward by one
-			//			// First, we need to make room in the items array
-			//			for (int i = menu->itemCount; i > lastButtonIndex + 1; i--) {
-			//				menu->items[i] = menu->items[i - 1];
-			//			}
-			//			newItem->window.rect->y += 15.f;
-			//			// Insert our new item right after the last button
-			//			menu->items[lastButtonIndex + 1] = newItem;
+						for (int i = menu->itemCount; i > insertIndex; i--) {
+							menu->items[i] = menu->items[i - 1];
+						}
 
-			//			// Increment item count
-			//			menu->itemCount++;
+						if (keyBindStatusIndex != -1) {
+							MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus AFTER shift: rect.y=%f\n",
+								menu->items[keyBindStatusIndex]->window.rect->y);
+						}
 
-			//			printf("Successfully duplicated button and inserted 'Sprint and Breath' at index %d\n", lastButtonIndex + 1);
-			//		}
-			//	}
-			//	});
+						menu->items[insertIndex] = newItem;
+						menu->itemCount++;
+
+						if (keyBindStatusIndex >= insertIndex) {
+							keyBindStatusIndex++;
+						}
+
+						MENU_DEBUG_PRINT("  [insertMenuItem] menu->items array pointer: %p\n", menu->items);
+						MENU_DEBUG_PRINT("  [insertMenuItem] About to write to items[%d]\n", insertIndex);
+						MENU_DEBUG_PRINT("  [insertMenuItem] items[%d] address: %p\n", insertIndex, &menu->items[insertIndex]);
+						if (keyBindStatusIndex != -1) {
+							MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus AFTER insert: rect.y=%f (now at index %d)\n",
+								menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
+						}
+
+						MENU_DEBUG_PRINT("  [insertMenuItem] Done. itemCount now %d\n", menu->itemCount);
+						};
+
+					for (int i = 0; i < menu->itemCount; i++) {
+						if (menu->items[i]->window.name && !strcmp(menu->items[i]->window.name, "keyBindStatus")) {
+							keyBindStatusIndex = i;
+							MENU_DEBUG_PRINT("FOUND keyBindStatus at index %d, rect.y=%f\n", i, menu->items[i]->window.rect->y);
+						}
+
+						if (menu->items[i]->type == ITEM_TYPE_BUTTON && menu->items[i]->text) {
+							lastButtonIndex = i;
+						}
+						if (menu->items[i]->type == ITEM_TYPE_BIND && menu->items[i]->dvar) {
+							lastBindIndex = i;
+						}
+					}
+
+					int newCapacity = menu->itemCount + 4;
+					itemDef_s** newItemsArray = (itemDef_s**)game::UI_Alloc(sizeof(itemDef_s*) * newCapacity, 4);
+					memcpy(newItemsArray, menu->items, sizeof(itemDef_s*) * menu->itemCount);
+					menu->items = newItemsArray;
+
+					MENU_DEBUG_PRINT("\n=== BEFORE MODIFICATION ===\n");
+					MENU_DEBUG_PRINT("lastButtonIndex=%d lastBindIndex=%d keyBindStatusIndex=%d\n", lastButtonIndex, lastBindIndex, keyBindStatusIndex);
+					if (keyBindStatusIndex != -1) {
+						MENU_DEBUG_PRINT("keyBindStatus: rect.y=%f\n", menu->items[keyBindStatusIndex]->window.rect->y);
+					}
+
+					itemDef_s* originalButtonTemplate = menu->items[lastButtonIndex];
+					itemDef_s* originalBindTemplate = menu->items[lastBindIndex];
+
+					if (lastButtonIndex != -1) {
+						MENU_DEBUG_PRINT("\n--- Creating Sprint button ---\n");
+						itemDef_s* sprintButton = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+						memcpy(sprintButton, originalButtonTemplate, sizeof(itemDef_s));
+						sprintButton->text = game::String_Alloc("Sprint");
+						sprintButton->window.rect->y += 15.f;
+						sprintButton->dvarTest = game::String_Alloc("yap_sprint_enable");
+						sprintButton->enableDvar = game::String_Alloc("1 ; 2");
+						sprintButton->dvarFlags = 0x4;
+						MENU_DEBUG_PRINT("Allocated Sprint button, rect.y=%f\n", sprintButton->window.rect->y);
+
+						insertMenuItem(sprintButton, lastButtonIndex + 1);
+						lastButtonIndex++;
+					}
+
+					if (lastButtonIndex != -1) {
+						MENU_DEBUG_PRINT("\n--- Creating Sprint/Hold Breath button ---\n");
+						itemDef_s* sprintBreathButton = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+						memcpy(sprintBreathButton, originalButtonTemplate, sizeof(itemDef_s));
+						sprintBreathButton->text = game::String_Alloc("Sprint/Hold Breath");
+						sprintBreathButton->dvarTest = game::String_Alloc("yap_sprint_enable");
+						sprintBreathButton->enableDvar = game::String_Alloc("1 ; 2");
+						sprintBreathButton->dvarFlags = 0x4;
+						sprintBreathButton->window.rect->y += 30.f;
+						MENU_DEBUG_PRINT("Allocated Sprint/Breath button, rect.y=%f\n", sprintBreathButton->window.rect->y);
+						MENU_DEBUG_PRINT("sprintBreathButton address: %p, window.rect address: %p\n",
+							sprintBreathButton, &sprintBreathButton->window.rect[0]);
+						MENU_DEBUG_PRINT("keyBindStatus address: %p, window.rect address: %p\n",
+							menu->items[keyBindStatusIndex], &menu->items[keyBindStatusIndex]->window.rect[0]);
+						MENU_DEBUG_PRINT("keyBindStatus rect.y BEFORE insertMenuItem: %f\n",
+							menu->items[keyBindStatusIndex]->window.rect->y);
+
+						insertMenuItem(sprintBreathButton, lastButtonIndex + 1);
+					}
+
+					if (lastBindIndex > lastButtonIndex - 2) {
+						lastBindIndex += 2;
+					}
+
+					if (lastBindIndex != -1) {
+						MENU_DEBUG_PRINT("\n--- Creating +sprint bind ---\n");
+						itemDef_s* sprintBind = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+						memcpy(sprintBind, originalBindTemplate, sizeof(itemDef_s));
+						sprintBind->dvar = game::String_Alloc("+sprint");
+						sprintBind->dvarTest = game::String_Alloc("yap_sprint_enable");
+						sprintBind->enableDvar = game::String_Alloc("1 ; 2");
+						sprintBind->dvarFlags = 0x4;
+						sprintBind->window.rect->y += 15.f;
+						MENU_DEBUG_PRINT("Allocated +sprint bind, rect.y=%f\n", sprintBind->window.rect->y);
+
+						insertMenuItem(sprintBind, lastBindIndex + 1);
+						lastBindIndex++;
+					}
+
+					if (lastBindIndex != -1) {
+						MENU_DEBUG_PRINT("\n--- Creating +sprintbreath bind ---\n");
+						itemDef_s* sprintBreathBind = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+						memcpy(sprintBreathBind, originalBindTemplate, sizeof(itemDef_s));
+						sprintBreathBind->dvar = game::String_Alloc("+sprintbreath");
+						sprintBreathBind->window.rect->y += 30.f;
+						sprintBreathBind->dvarTest = game::String_Alloc("yap_sprint_enable");
+						sprintBreathBind->enableDvar = game::String_Alloc("1 ; 2");
+						sprintBreathBind->dvarFlags = 0x4;
+						MENU_DEBUG_PRINT("Allocated +sprintbreath bind, rect.y=%f\n", sprintBreathBind->window.rect->y);
+
+						insertMenuItem(sprintBreathBind, lastBindIndex + 1);
+					}
+
+					MENU_DEBUG_PRINT("\n=== FINAL STATE ===\n");
+					if (keyBindStatusIndex != -1) {
+						MENU_DEBUG_PRINT("keyBindStatus FINAL: rect.y=%f (at index %d)\n",
+							menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
+					}
+				}
+				});
 
 
 			Memory::VP::InjectHook(exe(0x004B4B04), CG_GetWeaponVerticalBobFactor_sprint);
@@ -1346,6 +1484,9 @@ uintptr_t stance_sprint_shader = 0;
 				});
 
 			static auto CL_UpdateCmdButton = safetyhook::create_mid(exe(0x409AF0), [](SafetyHookContext& ctx) {
+				if (!yap_sprint_enable || yap_sprint_enable->value.integer == 0) {
+					return;
+				}
 				uint32_t* buttons = (uint32_t*)(ctx.eax + 0x4);
 				if (sprint.active || sprint.wasPressed) {
 					yap_activate_sprint();
