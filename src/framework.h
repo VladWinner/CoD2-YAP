@@ -58,3 +58,88 @@ typedef vec_t vec5_t[5];
 #define ADDR(addr_win, addr_linux) (addr_win)
 // Choose between Windows (W) or Linux (L) code
 #define WL(win, linux) win
+
+
+union itemDefData_t
+{
+	uint32_t listBox;
+	uint32_t editField;
+	uint32_t multi;
+	uint32_t enumDvarName;
+	uint32_t data;
+};
+
+
+struct rectDef_s
+{
+	uint32_t x;
+	uint32_t y;
+	uint32_t w;
+	uint32_t h;
+	uint32_t horzAlign;
+	uint32_t vertAlign;
+};
+
+struct windowDef_t
+{
+	char rect[96];
+	char rectClient[96];
+	const char* name;
+	const char* group;
+	const char* cinematicName;
+	const char* cinematic;
+	uint32_t style;
+	uint32_t border;
+	uint32_t ownerDraw;
+	uint32_t ownerDrawFlags;
+	uint32_t borderSize;
+	uint32_t staticFlags;
+	char dynamicFlags[16];
+	char rectEffects0[96];
+	char rectEffects1[96];
+	char offsetTime[16];
+	uint32_t nextTime;
+	char foreColor[16];
+	char backColor[16];
+	char borderColor[16];
+	char outlineColor[16];
+	uint32_t background;
+};
+
+struct itemDef_s
+{
+	//char window[528];
+	windowDef_t window;
+	//char textRect[96];
+	rectDef_s textRect[4];
+	uint32_t type;
+	uint32_t dataType;
+	uint32_t alignment;
+	uint32_t fontEnum;
+	uint32_t textalignment;
+	uint32_t textalignx;
+	uint32_t textaligny;
+	uint32_t textscale;
+	uint32_t textStyle;
+	const char* text;
+	uint32_t textSavegameInfo;
+	uint32_t parent;
+	const char* mouseEnterText;
+	const char* mouseExitText;
+	const char* mouseEnter;
+	const char* mouseExit;
+	const char* action;
+	const char* onAccept;
+	const char* onFocus;
+	const char* leaveFocus;
+	const char* dvar;
+	const char* dvarTest;
+	const char* onKey;
+	const char* enableDvar;
+	uint32_t dvarFlags;
+	uint32_t focusSound;
+	uint32_t special;
+	char cursorPos[16];
+	itemDefData_t typeData;
+	uint32_t imageTrack;
+};

@@ -28,6 +28,9 @@ dvars::developer = dvars::Dvar_FindVar("developer"); \
 
 namespace saves {
     dvar_s* yap_save_remove_levelshots_name;
+
+    dvar_s* yap_save_show_savemenu;
+
     char levelshot[256]{};
     uintptr_t va_screenshotJPEG_og;
     const char* va_screenshotJPEG(const char* format, const char* path) {
@@ -391,6 +394,7 @@ namespace saves {
 	public:
 		void post_unpack() override {
             yap_save_remove_levelshots_name = dvars::Dvar_RegisterInt("yap_save_remove_levelshots_name", 1, 0, 1, DVAR_ARCHIVE);
+            yap_save_show_savemenu = dvars::Dvar_RegisterInt("yap_save_show_savemenu", 1, 0, 1, DVAR_ARCHIVE, "Shows the save menu in the main menu");
 		}
 
 		void post_start() override {
@@ -410,6 +414,36 @@ namespace saves {
             auto ptr = exe(0x004C3C83);
             Memory::VP::Nop(ptr, 6);
             Memory::VP::InjectHook(ptr, CL_RegisterRawImageNoMip_saveimage, Memory::VP::HookType::Call);
+
+            static auto Item_Parse = safetyhook::create_mid(exe(0x4D115C), [](SafetyHookContext& ctx) {
+
+                itemDef_s* item = *(itemDef_s**)(ctx.esp + 0x428);
+                
+                if (item && item->window.name && !strcmp(item->window.name, "loadgame")) {
+                    printf("menu %s\n", item->window.name);
+
+                    if (item->dvar) {
+                        printf("dvar %s\n", item->dvar);
+                        //game::Z_Free(item->dvar);
+                    }
+
+                    if (item->dvarTest) {
+                        game::Z_Free(item->dvarTest);
+                        item->dvarTest = game::String_Alloc("yap_save_show_savemenu");
+                        printf("dvarTest %s\n", item->dvarTest);
+                        
+                        //item->dvarTest = NULL;
+
+                    }
+
+                    if (item->enableDvar) {
+                        printf("enableDvar %s\n", item->enableDvar);
+                        //game::Z_Free(item->enableDvar);
+                        //item->enableDvar = NULL;
+                    }
+                }
+                });
+                
 
 		}
 
