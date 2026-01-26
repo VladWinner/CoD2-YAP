@@ -30,7 +30,16 @@ namespace render {
 		}
 		return cdecl_call<int>(UI_DrawHandlePic_cursor_ptr, x, y, width, height, a5, a6);
 	}
+	void SafeAreaisModified() {
+		auto safeArea_horizontal = dvars::Dvar_FindVar("safeArea_horizontal");
+		if (safeArea_horizontal)
+			safeArea_horizontal->modified = true;
 
+		auto safeArea_vertical = dvars::Dvar_FindVar("safeArea_vertical");
+
+		if(safeArea_vertical)
+			safeArea_horizontal->modified = true;
+	}
 	class component final : public component_interface
 	{
 	public:
@@ -40,11 +49,11 @@ namespace render {
 			Memory::VP::InterceptCall(0x4C3A6E, UI_DrawHandlePic_cursor_ptr, UI_DrawHandlePic_cursor);
 
 		}
-
+		void post_cg_init() override {
+			SafeAreaisModified();
+		}
 		void post_gfx() override {
-			auto safeArea_horizontal = dvars::Dvar_FindVar("safeArea_horizontal");
-			if (safeArea_horizontal)
-				safeArea_horizontal->modified = true;
+			SafeAreaisModified();
 			if (!r_buf_dynamicIndexBuffer_mult) {
 				r_buf_dynamicIndexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicIndexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
 				r_buf_dynamicVertexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicVertexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
