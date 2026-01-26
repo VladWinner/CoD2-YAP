@@ -42,7 +42,9 @@ namespace render {
 		}
 
 		void post_gfx() override {
-
+			auto safeArea_horizontal = dvars::Dvar_FindVar("safeArea_horizontal");
+			if (safeArea_horizontal)
+				safeArea_horizontal->modified = true;
 			if (!r_buf_dynamicIndexBuffer_mult) {
 				r_buf_dynamicIndexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicIndexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
 				r_buf_dynamicVertexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicVertexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
