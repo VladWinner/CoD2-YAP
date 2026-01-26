@@ -89,6 +89,14 @@ namespace dvars {
     WEAK game::symbol<dvar_s* (const char*, int, int, int, uint16_t)> Dvar_RegisterInt_Original{ 0x431FC0 };
     WEAK game::symbol<dvar_s* (const char*, float, float, float, uint16_t)> Dvar_RegisterFloat_Original{ 0x432020 };
     WEAK game::symbol<dvar_s* (const char*, float, float, float, float, uint16_t)> Dvar_RegisterVec2_Original{ 0x4320A0 };
+    WEAK game::symbol<dvar_s* (const char* name,
+        float x,
+        float y,
+        float z,
+        float w,
+        float min,
+        float max,
+        uint16_t flags)> Dvar_RegisterVec4_Original{ 0x4321C0 };
     WEAK game::symbol<dvar_s* (const char*)> Dvar_FindVar{ 0x431260 };
 
     inline dvar_s* developer;
@@ -113,4 +121,21 @@ namespace dvars {
         }
         return Dvar_RegisterVec2_Original(name, x, y, min, max, flags);
     }
+
+    inline dvar_s* __cdecl Dvar_RegisterVec4(
+        const char* name,
+        float x,
+        float y,
+        float z,
+        float w,
+        float min,
+        float max,
+        uint16_t flags,
+        const char* description = nullptr) {
+        if (description && description[0] != '\0') {
+            descriptions_runtime[name] = description;
+        }
+        return Dvar_RegisterVec4_Original(name, x, y, z,w,min,max,flags);
+    }
+
 }
