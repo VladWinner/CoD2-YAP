@@ -76,8 +76,22 @@ struct rectDef_s
 	float y;
 	float w;
 	float h;
-	uint32_t horzAlign;
-	uint32_t vertAlign;
+	uint32_t horzAlign = 0;
+	uint32_t vertAlign = 0;
+
+
+	bool allFloatsSame(float epsilon = 1e-6f) const {
+		return (std::abs(x - y) < epsilon &&
+			std::abs(x - w) < epsilon &&
+			std::abs(x - h) < epsilon);
+	}
+
+	bool floatsEqual(const rectDef_s& other, float epsilon = 1e-6f) const {
+		return (std::abs(x - other.x) < epsilon &&
+			std::abs(y - other.y) < epsilon &&
+			std::abs(w - other.w) < epsilon &&
+			std::abs(h - other.h) < epsilon);
+	}
 };
 
 struct windowDef_t
@@ -171,3 +185,12 @@ struct menuDef_t
 	vec4_t disableColor;
 	itemDef_s** items;
 };
+
+inline bool matchesAny(const char* str, std::initializer_list<const char*> options) {
+	for (const char* option : options) {
+		if (strcmp(str, option) == 0) {
+			return true;
+		}
+	}
+	return false;
+}

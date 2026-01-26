@@ -1468,148 +1468,8 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 			static auto menu_parse_item = safetyhook::create_mid(exe(0x4D382A), [](SafetyHookContext& ctx) {
 				static char abuffer[256];
 				menuDef_t* menu = (menuDef_t*)(ctx.ebx);
-				if (menu && menu->window.name && !strcmp(menu->window.name, "options_shoot")) {
-					MENU_DEBUG_PRINT("name %s items %d\n", menu->window.name, menu->itemCount);
-					int lastButtonIndex = -1;
-					int lastBindIndex = -1;
-					int keyBindStatusIndex = -1;
+				component_loader::post_menu_parse(menu);
 
-					auto insertMenuItem = [&](itemDef_s* newItem, int insertIndex) {
-						MENU_DEBUG_PRINT("  [insertMenuItem] Inserting at index %d, current itemCount=%d\n", insertIndex, menu->itemCount);
-						if (keyBindStatusIndex != -1) {
-							MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus BEFORE shift: rect.y=%f (at index %d)\n",
-								menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
-						}
-
-						for (int i = menu->itemCount; i > insertIndex; i--) {
-							menu->items[i] = menu->items[i - 1];
-						}
-
-						if (keyBindStatusIndex != -1) {
-							MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus AFTER shift: rect.y=%f\n",
-								menu->items[keyBindStatusIndex]->window.rect->y);
-						}
-
-						menu->items[insertIndex] = newItem;
-						menu->itemCount++;
-
-						if (keyBindStatusIndex >= insertIndex) {
-							keyBindStatusIndex++;
-						}
-
-						MENU_DEBUG_PRINT("  [insertMenuItem] menu->items array pointer: %p\n", menu->items);
-						MENU_DEBUG_PRINT("  [insertMenuItem] About to write to items[%d]\n", insertIndex);
-						MENU_DEBUG_PRINT("  [insertMenuItem] items[%d] address: %p\n", insertIndex, &menu->items[insertIndex]);
-						if (keyBindStatusIndex != -1) {
-							MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus AFTER insert: rect.y=%f (now at index %d)\n",
-								menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
-						}
-
-						MENU_DEBUG_PRINT("  [insertMenuItem] Done. itemCount now %d\n", menu->itemCount);
-						};
-
-					for (int i = 0; i < menu->itemCount; i++) {
-						if (menu->items[i]->window.name && !strcmp(menu->items[i]->window.name, "keyBindStatus")) {
-							keyBindStatusIndex = i;
-							MENU_DEBUG_PRINT("FOUND keyBindStatus at index %d, rect.y=%f\n", i, menu->items[i]->window.rect->y);
-						}
-
-						if (menu->items[i]->type == ITEM_TYPE_BUTTON && menu->items[i]->text) {
-							lastButtonIndex = i;
-						}
-						if (menu->items[i]->type == ITEM_TYPE_BIND && menu->items[i]->dvar) {
-							lastBindIndex = i;
-						}
-					}
-
-					int newCapacity = menu->itemCount + 4;
-					itemDef_s** newItemsArray = (itemDef_s**)game::UI_Alloc(sizeof(itemDef_s*) * newCapacity, 4);
-					memcpy(newItemsArray, menu->items, sizeof(itemDef_s*) * menu->itemCount);
-					menu->items = newItemsArray;
-
-					MENU_DEBUG_PRINT("\n=== BEFORE MODIFICATION ===\n");
-					MENU_DEBUG_PRINT("lastButtonIndex=%d lastBindIndex=%d keyBindStatusIndex=%d\n", lastButtonIndex, lastBindIndex, keyBindStatusIndex);
-					if (keyBindStatusIndex != -1) {
-						MENU_DEBUG_PRINT("keyBindStatus: rect.y=%f\n", menu->items[keyBindStatusIndex]->window.rect->y);
-					}
-
-					itemDef_s* originalButtonTemplate = menu->items[lastButtonIndex];
-					itemDef_s* originalBindTemplate = menu->items[lastBindIndex];
-
-					if (lastButtonIndex != -1) {
-						MENU_DEBUG_PRINT("\n--- Creating Sprint button ---\n");
-						itemDef_s* sprintButton = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
-						memcpy(sprintButton, originalButtonTemplate, sizeof(itemDef_s));
-						sprintButton->text = game::String_Alloc(game::Menu_SafeTranslateString("@MENU_SPRINT","Sprint"));
-						sprintButton->window.rect->y += 15.f;
-						sprintButton->dvarTest = game::String_Alloc("yap_sprint_enable");
-						sprintButton->enableDvar = game::String_Alloc("1 ; 2");
-						sprintButton->dvarFlags = 0x4;
-						MENU_DEBUG_PRINT("Allocated Sprint button, rect.y=%f\n", sprintButton->window.rect->y);
-
-						insertMenuItem(sprintButton, lastButtonIndex + 1);
-						lastButtonIndex++;
-					}
-
-					if (lastButtonIndex != -1) {
-						MENU_DEBUG_PRINT("\n--- Creating Sprint/Hold Breath button ---\n");
-						itemDef_s* sprintBreathButton = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
-						memcpy(sprintBreathButton, originalButtonTemplate, sizeof(itemDef_s));
-						sprintBreathButton->text = game::String_Alloc(game::Menu_SafeTranslateString("@MENU_SPRINT_STEADY_SNIPER_RIFLE","Sprint/Hold Breath"));
-						sprintBreathButton->dvarTest = game::String_Alloc("yap_sprint_enable");
-						sprintBreathButton->enableDvar = game::String_Alloc("1 ; 2");
-						sprintBreathButton->dvarFlags = 0x4;
-						sprintBreathButton->window.rect->y += 30.f;
-						MENU_DEBUG_PRINT("Allocated Sprint/Breath button, rect.y=%f\n", sprintBreathButton->window.rect->y);
-						MENU_DEBUG_PRINT("sprintBreathButton address: %p, window.rect address: %p\n",
-							sprintBreathButton, &sprintBreathButton->window.rect[0]);
-						MENU_DEBUG_PRINT("keyBindStatus address: %p, window.rect address: %p\n",
-							menu->items[keyBindStatusIndex], &menu->items[keyBindStatusIndex]->window.rect[0]);
-						MENU_DEBUG_PRINT("keyBindStatus rect.y BEFORE insertMenuItem: %f\n",
-							menu->items[keyBindStatusIndex]->window.rect->y);
-
-						insertMenuItem(sprintBreathButton, lastButtonIndex + 1);
-					}
-
-					if (lastBindIndex > lastButtonIndex - 2) {
-						lastBindIndex += 2;
-					}
-
-					if (lastBindIndex != -1) {
-						MENU_DEBUG_PRINT("\n--- Creating +sprint bind ---\n");
-						itemDef_s* sprintBind = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
-						memcpy(sprintBind, originalBindTemplate, sizeof(itemDef_s));
-						sprintBind->dvar = game::String_Alloc("+sprint");
-						sprintBind->dvarTest = game::String_Alloc("yap_sprint_enable");
-						sprintBind->enableDvar = game::String_Alloc("1 ; 2");
-						sprintBind->dvarFlags = 0x4;
-						sprintBind->window.rect->y += 15.f;
-						MENU_DEBUG_PRINT("Allocated +sprint bind, rect.y=%f\n", sprintBind->window.rect->y);
-
-						insertMenuItem(sprintBind, lastBindIndex + 1);
-						lastBindIndex++;
-					}
-
-					if (lastBindIndex != -1) {
-						MENU_DEBUG_PRINT("\n--- Creating +sprintbreath bind ---\n");
-						itemDef_s* sprintBreathBind = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
-						memcpy(sprintBreathBind, originalBindTemplate, sizeof(itemDef_s));
-						sprintBreathBind->dvar = game::String_Alloc("+sprintbreath");
-						sprintBreathBind->window.rect->y += 30.f;
-						sprintBreathBind->dvarTest = game::String_Alloc("yap_sprint_enable");
-						sprintBreathBind->enableDvar = game::String_Alloc("1 ; 2");
-						sprintBreathBind->dvarFlags = 0x4;
-						MENU_DEBUG_PRINT("Allocated +sprintbreath bind, rect.y=%f\n", sprintBreathBind->window.rect->y);
-
-						insertMenuItem(sprintBreathBind, lastBindIndex + 1);
-					}
-
-					MENU_DEBUG_PRINT("\n=== FINAL STATE ===\n");
-					if (keyBindStatusIndex != -1) {
-						MENU_DEBUG_PRINT("keyBindStatus FINAL: rect.y=%f (at index %d)\n",
-							menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
-					}
-				}
 				});
 
 
@@ -1712,6 +1572,153 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 				}
 
 				});
+
+		}
+
+		void post_menu_parse(menuDef_t* menu) override {
+
+			if (menu && menu->window.name && !strcmp(menu->window.name, "options_shoot")) {
+				MENU_DEBUG_PRINT("name %s items %d\n", menu->window.name, menu->itemCount);
+				int lastButtonIndex = -1;
+				int lastBindIndex = -1;
+				int keyBindStatusIndex = -1;
+
+				auto insertMenuItem = [&](itemDef_s* newItem, int insertIndex) {
+					MENU_DEBUG_PRINT("  [insertMenuItem] Inserting at index %d, current itemCount=%d\n", insertIndex, menu->itemCount);
+					if (keyBindStatusIndex != -1) {
+						MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus BEFORE shift: rect.y=%f (at index %d)\n",
+							menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
+					}
+
+					for (int i = menu->itemCount; i > insertIndex; i--) {
+						menu->items[i] = menu->items[i - 1];
+					}
+
+					if (keyBindStatusIndex != -1) {
+						MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus AFTER shift: rect.y=%f\n",
+							menu->items[keyBindStatusIndex]->window.rect->y);
+					}
+
+					menu->items[insertIndex] = newItem;
+					menu->itemCount++;
+
+					if (keyBindStatusIndex >= insertIndex) {
+						keyBindStatusIndex++;
+					}
+
+					MENU_DEBUG_PRINT("  [insertMenuItem] menu->items array pointer: %p\n", menu->items);
+					MENU_DEBUG_PRINT("  [insertMenuItem] About to write to items[%d]\n", insertIndex);
+					MENU_DEBUG_PRINT("  [insertMenuItem] items[%d] address: %p\n", insertIndex, &menu->items[insertIndex]);
+					if (keyBindStatusIndex != -1) {
+						MENU_DEBUG_PRINT("  [insertMenuItem] keyBindStatus AFTER insert: rect.y=%f (now at index %d)\n",
+							menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
+					}
+
+					MENU_DEBUG_PRINT("  [insertMenuItem] Done. itemCount now %d\n", menu->itemCount);
+					};
+
+				for (int i = 0; i < menu->itemCount; i++) {
+					if (menu->items[i]->window.name && !strcmp(menu->items[i]->window.name, "keyBindStatus")) {
+						keyBindStatusIndex = i;
+						MENU_DEBUG_PRINT("FOUND keyBindStatus at index %d, rect.y=%f\n", i, menu->items[i]->window.rect->y);
+					}
+
+					if (menu->items[i]->type == ITEM_TYPE_BUTTON && menu->items[i]->text) {
+						lastButtonIndex = i;
+					}
+					if (menu->items[i]->type == ITEM_TYPE_BIND && menu->items[i]->dvar) {
+						lastBindIndex = i;
+					}
+				}
+
+				int newCapacity = menu->itemCount + 4;
+				itemDef_s** newItemsArray = (itemDef_s**)game::UI_Alloc(sizeof(itemDef_s*) * newCapacity, 4);
+				memcpy(newItemsArray, menu->items, sizeof(itemDef_s*) * menu->itemCount);
+				menu->items = newItemsArray;
+
+				MENU_DEBUG_PRINT("\n=== BEFORE MODIFICATION ===\n");
+				MENU_DEBUG_PRINT("lastButtonIndex=%d lastBindIndex=%d keyBindStatusIndex=%d\n", lastButtonIndex, lastBindIndex, keyBindStatusIndex);
+				if (keyBindStatusIndex != -1) {
+					MENU_DEBUG_PRINT("keyBindStatus: rect.y=%f\n", menu->items[keyBindStatusIndex]->window.rect->y);
+				}
+
+				itemDef_s* originalButtonTemplate = menu->items[lastButtonIndex];
+				itemDef_s* originalBindTemplate = menu->items[lastBindIndex];
+
+				if (lastButtonIndex != -1) {
+					MENU_DEBUG_PRINT("\n--- Creating Sprint button ---\n");
+					itemDef_s* sprintButton = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+					memcpy(sprintButton, originalButtonTemplate, sizeof(itemDef_s));
+					sprintButton->text = game::String_Alloc(game::Menu_SafeTranslateString("@MENU_SPRINT", "Sprint"));
+					sprintButton->window.rect->y += 15.f;
+					sprintButton->dvarTest = game::String_Alloc("yap_sprint_enable");
+					sprintButton->enableDvar = game::String_Alloc("1 ; 2");
+					sprintButton->dvarFlags = 0x4;
+					MENU_DEBUG_PRINT("Allocated Sprint button, rect.y=%f\n", sprintButton->window.rect->y);
+
+					insertMenuItem(sprintButton, lastButtonIndex + 1);
+					lastButtonIndex++;
+				}
+
+				if (lastButtonIndex != -1) {
+					MENU_DEBUG_PRINT("\n--- Creating Sprint/Hold Breath button ---\n");
+					itemDef_s* sprintBreathButton = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+					memcpy(sprintBreathButton, originalButtonTemplate, sizeof(itemDef_s));
+					sprintBreathButton->text = game::String_Alloc(game::Menu_SafeTranslateString("@MENU_SPRINT_STEADY_SNIPER_RIFLE", "Sprint/Hold Breath"));
+					sprintBreathButton->dvarTest = game::String_Alloc("yap_sprint_enable");
+					sprintBreathButton->enableDvar = game::String_Alloc("1 ; 2");
+					sprintBreathButton->dvarFlags = 0x4;
+					sprintBreathButton->window.rect->y += 30.f;
+					MENU_DEBUG_PRINT("Allocated Sprint/Breath button, rect.y=%f\n", sprintBreathButton->window.rect->y);
+					MENU_DEBUG_PRINT("sprintBreathButton address: %p, window.rect address: %p\n",
+						sprintBreathButton, &sprintBreathButton->window.rect[0]);
+					MENU_DEBUG_PRINT("keyBindStatus address: %p, window.rect address: %p\n",
+						menu->items[keyBindStatusIndex], &menu->items[keyBindStatusIndex]->window.rect[0]);
+					MENU_DEBUG_PRINT("keyBindStatus rect.y BEFORE insertMenuItem: %f\n",
+						menu->items[keyBindStatusIndex]->window.rect->y);
+
+					insertMenuItem(sprintBreathButton, lastButtonIndex + 1);
+				}
+
+				if (lastBindIndex > lastButtonIndex - 2) {
+					lastBindIndex += 2;
+				}
+
+				if (lastBindIndex != -1) {
+					MENU_DEBUG_PRINT("\n--- Creating +sprint bind ---\n");
+					itemDef_s* sprintBind = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+					memcpy(sprintBind, originalBindTemplate, sizeof(itemDef_s));
+					sprintBind->dvar = game::String_Alloc("+sprint");
+					sprintBind->dvarTest = game::String_Alloc("yap_sprint_enable");
+					sprintBind->enableDvar = game::String_Alloc("1 ; 2");
+					sprintBind->dvarFlags = 0x4;
+					sprintBind->window.rect->y += 15.f;
+					MENU_DEBUG_PRINT("Allocated +sprint bind, rect.y=%f\n", sprintBind->window.rect->y);
+
+					insertMenuItem(sprintBind, lastBindIndex + 1);
+					lastBindIndex++;
+				}
+
+				if (lastBindIndex != -1) {
+					MENU_DEBUG_PRINT("\n--- Creating +sprintbreath bind ---\n");
+					itemDef_s* sprintBreathBind = (itemDef_s*)game::UI_Alloc(sizeof(itemDef_s), 4);
+					memcpy(sprintBreathBind, originalBindTemplate, sizeof(itemDef_s));
+					sprintBreathBind->dvar = game::String_Alloc("+sprintbreath");
+					sprintBreathBind->window.rect->y += 30.f;
+					sprintBreathBind->dvarTest = game::String_Alloc("yap_sprint_enable");
+					sprintBreathBind->enableDvar = game::String_Alloc("1 ; 2");
+					sprintBreathBind->dvarFlags = 0x4;
+					MENU_DEBUG_PRINT("Allocated +sprintbreath bind, rect.y=%f\n", sprintBreathBind->window.rect->y);
+
+					insertMenuItem(sprintBreathBind, lastBindIndex + 1);
+				}
+
+				MENU_DEBUG_PRINT("\n=== FINAL STATE ===\n");
+				if (keyBindStatusIndex != -1) {
+					MENU_DEBUG_PRINT("keyBindStatus FINAL: rect.y=%f (at index %d)\n",
+						menu->items[keyBindStatusIndex]->window.rect->y, keyBindStatusIndex);
+				}
+			}
 
 		}
 

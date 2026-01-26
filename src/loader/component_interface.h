@@ -37,7 +37,9 @@ public:
 	virtual void after_item_parse(itemDef_s* item)
 	{
 	}
-
+	virtual void post_menu_parse(menuDef_t* item)
+	{
+	}
 	virtual void* load_import([[maybe_unused]] const std::string& library, [[maybe_unused]] const std::string& function)
 	{
 		return nullptr;

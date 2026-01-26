@@ -48,6 +48,7 @@ public:
 	static void pre_destroy();
 	static void clean();
 	static void after_item_parse(itemDef_s* this_item);
+	static void post_menu_parse(menuDef_t* this_menu);
 
 	static void* load_import(const std::string& library, const std::string& function);
 

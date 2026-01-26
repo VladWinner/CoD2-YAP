@@ -115,6 +115,68 @@ namespace render {
 
 		}
 
+		void post_menu_parse(menuDef_t* menu) override {
+			return;
+			for (int i = 0; i < menu->itemCount; i++) {
+				auto item = menu->items[i];
+				if (item && item->window.name) {
+					auto rect = &item->window.rect[0];
+
+					rectDef_s backimage2fade_og = { -332.f, -162.f, 896.f, 484.f };
+					if (!strcmp(item->window.name, "backimage2fade") && rect->floatsEqual(backimage2fade_og)) {
+						//rect->x = -640.f;
+						//rect->y = -480.f;
+						//rect->w = 640.f;
+						//rect->h = 480.f;
+						rect->horzAlign = 4;
+						rect->vertAlign = 4;
+					}
+
+					rectDef_s background_og = { -128.f, 0.f, 896.f, 480.f };
+					if (matchesAny(item->window.name, { "background_image", "main_back", "defaultbackdrop", "backdrop" })
+						&& rect->floatsEqual(background_og)) {
+						rect->x = -106.8f;
+						rect->y = 0.f;
+						rect->w = 853.5f;
+						rect->h = 480.f;
+						rect->horzAlign = 4;
+						rect->vertAlign = 4;
+					}
+
+					rectDef_s fadebox_og = { 0.f, 0.f, 640.f, 480.f };
+					if (!strcmp(item->window.name, "fadebox") && rect->floatsEqual(fadebox_og)) {
+						rect->horzAlign = 4;
+						rect->vertAlign = 4;
+					}
+
+					rectDef_s bg_gradient_og = { 0.f, 65.f, 416.f, 351.f };
+					if (!strcmp(item->window.name, "background_gradient") && rect->floatsEqual(bg_gradient_og)) {
+						rect->x = 0.f;
+						rect->y = 0.f;
+						rect->w = 640.f;
+						rect->h = 480.f;
+						rect->horzAlign = 4;
+						rect->vertAlign = 4;
+					}
+
+					rectDef_s main_back_top_og = { 0.f, 0.f, 640.f, 320.f };
+					if (!strcmp(item->window.name, "main_back_top") && rect->floatsEqual(main_back_top_og)) {
+						rect->x = -106.8f;
+						rect->y = 0.f;
+						rect->w = 853.5f;
+						rect->h = 320.f;
+					}
+
+					rectDef_s main_back_bottom_og = { 0.f, 320.f, 640.f, 160.f };
+					if (!strcmp(item->window.name, "main_back_bottom") && rect->floatsEqual(main_back_bottom_og)) {
+						rect->x = -106.8f;
+						rect->y = 320.f;
+						rect->w = 853.5f;
+						rect->h = 160.f;
+					}
+				}
+			}
+		}
 
 	};
 

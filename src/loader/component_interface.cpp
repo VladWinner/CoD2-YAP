@@ -79,6 +79,12 @@ void component_loader::after_item_parse(itemDef_s* this_item)
 		component_->after_item_parse(this_item);
 }
 
+void component_loader::post_menu_parse(menuDef_t* this_menu)
+{
+	for (const auto& component_ : get_components())
+		component_->post_menu_parse(this_menu);
+}
+
 void component_loader::pre_destroy()
 {
 	static auto handled = false;
