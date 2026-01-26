@@ -36,14 +36,12 @@ namespace render {
 	public:
 
 		void post_start() override {
-
+			SetProcessDPIAware();
 			Memory::VP::InterceptCall(0x4C3A6E, UI_DrawHandlePic_cursor_ptr, UI_DrawHandlePic_cursor);
 
 		}
 
 		void post_gfx() override {
-
-			SetProcessDPIAware();
 
 			if (!r_buf_dynamicIndexBuffer_mult) {
 				r_buf_dynamicIndexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicIndexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
