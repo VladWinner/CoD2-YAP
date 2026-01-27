@@ -116,7 +116,6 @@ namespace render {
 		}
 
 		void post_menu_parse(menuDef_t* menu) override {
-			return;
 			for (int i = 0; i < menu->itemCount; i++) {
 				auto item = menu->items[i];
 				if (item && item->window.name) {
@@ -124,10 +123,10 @@ namespace render {
 
 					rectDef_s backimage2fade_og = { -332.f, -162.f, 896.f, 484.f };
 					if (!strcmp(item->window.name, "backimage2fade") && rect->floatsEqual(backimage2fade_og)) {
-						//rect->x = -640.f;
-						//rect->y = -480.f;
-						//rect->w = 640.f;
-						//rect->h = 480.f;
+						rect->x = -640.f;
+						rect->y = -480.f;
+						rect->w = 640.f;
+						rect->h = 480.f;
 						rect->horzAlign = 4;
 						rect->vertAlign = 4;
 					}
@@ -139,8 +138,8 @@ namespace render {
 						rect->y = 0.f;
 						rect->w = 853.5f;
 						rect->h = 480.f;
-						rect->horzAlign = 4;
-						rect->vertAlign = 4;
+						//rect->horzAlign = 4;
+						//rect->vertAlign = 4;
 					}
 
 					rectDef_s fadebox_og = { 0.f, 0.f, 640.f, 480.f };
