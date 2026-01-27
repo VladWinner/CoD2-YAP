@@ -117,7 +117,7 @@ BOOL __stdcall FreeLibraryHook(HMODULE hLibModule) {
         char LibraryName[256]{};
         GetModuleFileNameA(hLibModule, LibraryName, sizeof(LibraryName));
 
-        if (strstr(LibraryName, "gfx_d3dgfx_d3d") != NULL) {
+        if (strstr(LibraryName, "gfx_d3d") != NULL) {
             gfx_d3d_dll = 0;
         }
 
