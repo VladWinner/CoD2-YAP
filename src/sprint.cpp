@@ -1154,7 +1154,6 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 
 
 		auto result = cdecl_call<int>(PM_IDK4DE720_og, pm, a2);
-		printf("anim %d state %d delay %d time %d\n", ps->weapAnim, ps->weaponstate, ps->weaponDelay,ps->weaponTime);
 
 		return result;
 
