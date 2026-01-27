@@ -30,7 +30,7 @@ namespace saves {
     dvar_s* yap_save_remove_levelshots_name;
 
     dvar_s* yap_save_show_savemenu;
-
+    dvar_s* yap_save_take_screenshots;
     char levelshot[256]{};
     uintptr_t va_screenshotJPEG_og;
     const char* va_screenshotJPEG(const char* format, const char* path) {
@@ -397,14 +397,24 @@ namespace saves {
                 return;
             yap_save_remove_levelshots_name = dvars::Dvar_RegisterInt("yap_save_remove_levelshots_name", 1, 0, 1, DVAR_ARCHIVE);
             yap_save_show_savemenu = dvars::Dvar_RegisterInt("yap_save_show_savemenu", 1, 0, 1, DVAR_ARCHIVE, "Shows the save menu in the main menu");
+            yap_save_take_screenshots = dvars::Dvar_RegisterInt("yap_save_take_screenshots", 0, 0, 2, DVAR_ARCHIVE,"Takes screenshots when saving\n1 always takes screenshots on saves\n2 takes screenshots when it isn't an autosave");
 		}
 
 		void post_start() override {
             if (!exe(1))
                 return;
-			Memory::Nop(exe(0x4E0517), 2); // Allow for original screenshotJPEG savegame save/%s to work.
 			Memory::VP::Patch(exe(0x4E051A + 1), "screenshotJPEG savegame %s"); // no need for save/ anymore as they pass in the correct path now!
             Memory::VP::InterceptCall(exe(0x4E051F), va_screenshotJPEG_og, va_screenshotJPEG); // they pass in a .svg at the end which isn't ideal for screenshots, you'd end up with .svg.jpg, so we'll remove it.
+
+            Memory::Nop(exe(0x4E0517), 2); // Allow for original screenshotJPEG savegame save/%s to work.
+            static auto make_original_screenshotwork = safetyhook::create_mid(exe(0x4E0517), [](SafetyHookContext& ctx) {
+                if (!yap_save_take_screenshots->value.integer || (yap_save_take_screenshots->value.integer == 2 && levelshot[0] == '\0')) {
+                    ctx.eip = 0x4E0554;
+                }
+
+                
+
+                });
 
             static auto SV_AddPendingSave = safetyhook::create_mid(exe(0x44A140), [](SafetyHookContext& ctx) {
 
