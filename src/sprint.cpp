@@ -1149,6 +1149,7 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 
 			pm->ps->weaponstate = 17;
 			PM_Weapon_Idle(pm->ps);
+			ps->weapAnim = 2;
 		}
 
 
@@ -1292,7 +1293,7 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 
 			yap_player_sprintStrafeSpeedScale = dvars::Dvar_RegisterFloat("yap_player_sprintStrafeSpeedScale", 0.667, 0.01f, 1.f, DVAR_ARCHIVE, "The speed at which you can strafe while sprinting");
 
-			//yap_sprint_reload_cancel = dvars::Dvar_RegisterInt("yap_sprint_reload_cancel", 0, 0, 1, DVAR_ARCHIVE, "Cancels reloading when starting to sprint");
+			yap_sprint_reload_cancel = dvars::Dvar_RegisterInt("yap_sprint_reload_cancel", 0, 0, 1, 0, "Cancels reloading when starting to sprint");
 
 			yap_sprint_bind_holdbreath = dvars::Dvar_RegisterInt("yap_sprint_bind_holdbreath", 1, 0, 1, DVAR_ARCHIVE);
 
@@ -1363,7 +1364,7 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 
 			Memory::VP::InterceptCall(exe(0x50CACF), PM_WalkMove_og, PM_WalkMove);
 
-			//Memory::VP::InterceptCall(exe(0x4DFC88), PM_IDK4DE720_og, PM_IDK4DE720);
+			Memory::VP::InterceptCall(exe(0x4DFC88), PM_IDK4DE720_og, PM_IDK4DE720);
 
 			Memory::VP::InjectHook(0x4A8142, UI_DrawHandlePic_stub);
 
