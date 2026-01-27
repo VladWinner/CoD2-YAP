@@ -12,9 +12,12 @@
 #include "buildnumber.h"
 
 #include "cexception.hpp"
-
-uintptr_t exe(uintptr_t sp) {
+bool isMP = false;
+uintptr_t exe(uintptr_t sp, uintptr_t mp) {
+    if(!isMP)
     return sp;
+
+    return mp;
 }
 
 LPVOID GetModuleEndAddress(HMODULE hModule) {
@@ -104,8 +107,10 @@ uintptr_t gfx(uintptr_t sp, uintptr_t mp) {
     uintptr_t result = 0;
 
 
-
-    result = sp;
+    if (!isMP)
+        result = sp;
+    else
+        result = mp;
         result = GFX_D3D_OFF(result);
     
     return result;
@@ -178,24 +183,38 @@ int post_sv_cheats_first() {
 }
 
 void Init() {
-    
+    OpenConsoleAndRedirectIO();
     uint32_t value;
     Memory::VP::Read(0x00434815, value);
 
-    if (value != 0x57675868)
+    if (value == 0x57675868) {
+        isMP = false;
+        printf("SP\n");
+    }
+    else if (value == 0x3800F08F) {
+        isMP = true;
+        printf("MP\n");
+        MessageBoxA(NULL, "YAP", "MP", 0);
+    }
+    else {
+
+        MessageBoxA(NULL, "YAP", "Unsupported Title", 0);
         return;
+    }
+        
 
     SetUnhandledExceptionFilter(CustomUnhandledExceptionFilter);
 
     FreeLibraryD = safetyhook::create_inline(FreeLibrary, FreeLibraryHook);
     LoadLibraryD = safetyhook::create_inline(LoadLibraryA, LoadLibraryHook);
-    OpenConsoleAndRedirectIO();
-    component_loader::post_start();
-    Memory::VP::InterceptCall(0x4A3999, CG_init_ptr, CG_Init_stub);
 
-    Memory::InterceptCall(exe(0x4509AF), post_sv_cheats_first_addr, post_sv_cheats_first);
+    component_loader::post_start();
+    Memory::VP::InterceptCall(exe(0x4A3999,0x4C0E20), CG_init_ptr, CG_Init_stub);
+
+    Memory::VP::InterceptCall(exe(0x4509AF,0x466524), post_sv_cheats_first_addr, post_sv_cheats_first);
 
     static const char* version = "CoD2-YAP r" BUILD_NUMBER_STR;
+    if(exe(1))
     Memory::VP::Patch<const char*>(exe((0x004060E6 + 1)), version);
 
 }

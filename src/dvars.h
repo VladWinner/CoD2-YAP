@@ -86,9 +86,9 @@ typedef struct dvar_s
 
 namespace dvars {
     inline std::unordered_map<std::string, std::string> descriptions_runtime;
-    WEAK game::symbol<dvar_s* (const char*, int, int, int, uint16_t)> Dvar_RegisterInt_Original{ 0x431FC0 };
-    WEAK game::symbol<dvar_s* (const char*, float, float, float, uint16_t)> Dvar_RegisterFloat_Original{ 0x432020 };
-    WEAK game::symbol<dvar_s* (const char*, float, float, float, float, uint16_t)> Dvar_RegisterVec2_Original{ 0x4320A0 };
+    WEAK game::symbol<dvar_s* (const char*, int, int, int, uint16_t)> Dvar_RegisterInt_Original{ 0x431FC0,0x4380A0 };
+    WEAK game::symbol<dvar_s* (const char*, float, float, float, uint16_t)> Dvar_RegisterFloat_Original{ 0x432020,0x00438100 };
+    WEAK game::symbol<dvar_s* (const char*, float, float, float, float, uint16_t)> Dvar_RegisterVec2_Original{ 0x4320A0,0x438180 };
     WEAK game::symbol<dvar_s* (const char* name,
         float x,
         float y,
@@ -96,8 +96,8 @@ namespace dvars {
         float w,
         float min,
         float max,
-        uint16_t flags)> Dvar_RegisterVec4_Original{ 0x4321C0 };
-    WEAK game::symbol<dvar_s* (const char*)> Dvar_FindVar{ 0x431260 };
+        uint16_t flags)> Dvar_RegisterVec4_Original{ 0x4321C0,0x4382A0 };
+    WEAK game::symbol<dvar_s* (const char*)> Dvar_FindVar{ 0x431260,0x4373A0 };
 
     inline dvar_s* developer;
 

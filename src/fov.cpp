@@ -70,6 +70,8 @@ namespace fov {
 	{
 	public:
 		void post_gfx() override {
+			if (!exe(1))
+				return;
 			if (!cg_fovscale) {
 				cg_fovscale = dvars::Dvar_RegisterFloat("cg_fovscale", 1.f, 0.01f, 2.f, DVAR_ARCHIVE,"Scale applied to the field of view");
 				cg_fov_fix_lowfovads = dvars::Dvar_RegisterInt("cg_fov_fix_lowfovads", 1, 0, 2, DVAR_ARCHIVE);
@@ -90,6 +92,8 @@ namespace fov {
 		}
 
 		void post_start() override {
+			if (!exe(1))
+				return;
 			Memory::VP::Patch(exe(0x4A1195 + 1), DVAR_ARCHIVE | DVAR_SCRIPTINFO);
 
 			Memory::VP::Patch<dvar_s**>(exe(0x4AE7D9 + 1), &cg_fov_fake_ptr); // no worry of bad read, its always trying to read value.decimal
@@ -98,6 +102,8 @@ namespace fov {
 		}
 
 		void post_cg_init() override {
+			if (!exe(1))
+				return;
 			cg_fov = dvars::Dvar_FindVar("cg_fov");
 
 			float default_value = cg_fov ? cg_fov->defaultValue.decimal : 80.f;

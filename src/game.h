@@ -3,6 +3,7 @@
 #include "..\loader\component_loader.h"
 #include <Hooking.Patterns.h>
 #include "..\framework.h"
+#include "MemoryMgr.h"
 #define WEAK __declspec(selectany)
 
 extern uintptr_t gfx_d3d_dll;
@@ -24,6 +25,13 @@ namespace game
 		T* get() const
 		{
 			T* ptr = sp_object;
+			uint32_t value = 0;
+			Memory::VP::Read(0x00434815, value);
+
+			 if (value == 0x3800F08F) {
+				 ptr = mp_object;
+			}
+
 			uintptr_t base_address = 0;
 
 			switch (offset)
@@ -181,11 +189,11 @@ namespace game {
 
 	//WEAK symbol<qhandle_t> whiteShader{ 0x48422E8 };
 
-	WEAK symbol<void(const char* command_name, void(__cdecl* function)())> Cmd_AddCommand{ 0x41BB00 };
-	WEAK symbol<void(void* Block)> Z_Free_internal{ 0x4266A0 };
-	WEAK symbol<const char*(const char* string)> String_Alloc{ 0x4D4570 };
+	WEAK symbol<void(const char* command_name, void(__cdecl* function)())> Cmd_AddCommand{ 0x41BB00,0x4212F0 };
+	WEAK symbol<void(void* Block)> Z_Free_internal{ 0x4266A0,0x42C2C0 };
+	WEAK symbol<const char*(const char* string)> String_Alloc{ 0x4D4570,0x547150 };
 
-	WEAK symbol<void* (uint32_t size, uint32_t alignment)> Hunk_AllocAlignInternal{ 0x426F30 };
+	WEAK symbol<void* (uint32_t size, uint32_t alignment)> Hunk_AllocAlignInternal{ 0x426F30,0x42CB70 };
 
 	inline void* UI_Alloc(uint32_t size, uint32_t alignment) {
 		return game::Hunk_AllocAlignInternal(size, alignment);
@@ -360,6 +368,6 @@ namespace game {
 //	return &g_psExtensions[ps];
 //}
 
-WEAK game::symbol<int (const char *Format, ...)> Com_Printf{ 0x42C130 };
+WEAK game::symbol<int (const char *Format, ...)> Com_Printf{ 0x42C130,0x431EE0 };
 
 extern void retptr();

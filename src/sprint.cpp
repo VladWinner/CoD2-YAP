@@ -1245,6 +1245,8 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 	public:
 
 		void post_unpack() override {
+			if (!exe(1))
+				return;
 			sprint_timers::init_state_dvar();
 			timers_yap_sprint_int = dvars::Dvar_RegisterVec4("timers_yap_sprint_int",0,0,0,0,INT32_MIN, INT32_MAX,DVAR_SCRIPTINFO | DVAR_NOWRITE,"DO NOT TOUCH THIS!!");
 			dvars::developer = dvars::Dvar_FindVar("developer");
@@ -1307,10 +1309,14 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 		}
 
 		void post_cg_init() override {
+			if (!exe(1))
+				return;
 			loadEWeapons();
 		}
 
 		void post_start() override {
+			if (!exe(1))
+				return;
 			uint32_t arraysize = 0;
 			auto moddebindings = game::GetModdedBindings(arraysize);
 			patch_binding_s_references(moddebindings, arraysize);
@@ -1576,7 +1582,8 @@ void UI_DrawHandlePic_stub(float x, float y, float w, float h, vec4_t* color, vo
 		}
 
 		void post_menu_parse(menuDef_t* menu) override {
-
+			if (!exe(1))
+				return;
 			if (menu && menu->window.name && !strcmp(menu->window.name, "options_shoot")) {
 				MENU_DEBUG_PRINT("name %s items %d\n", menu->window.name, menu->itemCount);
 				int lastButtonIndex = -1;

@@ -114,6 +114,8 @@ namespace console {
 	public:
 
 		void post_start() override {
+			if (!exe(1))
+				return;
 			Memory::VP::InterceptCall(0x405E9B, ConDrawInput_Box_og, ConDrawInput_Box_domain_le_proper);
 			Memory::VP::Patch<uint8_t>(exe(0x405C43 + 2), 3);
 			static auto consoel_flags = safetyhook::create_mid(exe(0x405E43), [](SafetyHookContext& ctx) {

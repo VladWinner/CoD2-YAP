@@ -393,11 +393,15 @@ namespace saves {
 	{
 	public:
 		void post_unpack() override {
+            if (!exe(1))
+                return;
             yap_save_remove_levelshots_name = dvars::Dvar_RegisterInt("yap_save_remove_levelshots_name", 1, 0, 1, DVAR_ARCHIVE);
             yap_save_show_savemenu = dvars::Dvar_RegisterInt("yap_save_show_savemenu", 1, 0, 1, DVAR_ARCHIVE, "Shows the save menu in the main menu");
 		}
 
 		void post_start() override {
+            if (!exe(1))
+                return;
 			Memory::Nop(exe(0x4E0517), 2); // Allow for original screenshotJPEG savegame save/%s to work.
 			Memory::VP::Patch(exe(0x4E051A + 1), "screenshotJPEG savegame %s"); // no need for save/ anymore as they pass in the correct path now!
             Memory::VP::InterceptCall(exe(0x4E051F), va_screenshotJPEG_og, va_screenshotJPEG); // they pass in a .svg at the end which isn't ideal for screenshots, you'd end up with .svg.jpg, so we'll remove it.
@@ -426,6 +430,8 @@ namespace saves {
 
 		}
         void after_item_parse(itemDef_s* this_item) override {
+            if (!exe(1))
+                return;
             auto item = this_item;
             if (item && item->window.name && !strcmp(item->window.name, "loadgame")) {
                 printf("menu %s\n", item->window.name);

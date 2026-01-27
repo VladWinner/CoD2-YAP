@@ -40,21 +40,21 @@ namespace xanim {
 			yap_xanim_iw3_float = dvars::Dvar_RegisterFloat("yap_xanim_iw3_transitionTime", 0.5f, 0.f, 1.f,DVAR_ARCHIVE,"Time for transition time in WeaponRunXModelAnims for when xanim hasn't finished\nThis does the smoothed out weapon anim cancel in IW3+");
 		}
 		void post_start() override {
-			static auto eh = safetyhook::create_mid(0x4B29AD, ehf);
+			static auto eh = safetyhook::create_mid(exe(0x4B29AD,0x4D3A1D), ehf);
 
-			static auto XAnimSetGoalWeight1 = safetyhook::create_mid(0x4B2588, [](SafetyHookContext& ctx) {
+			static auto XAnimSetGoalWeight1 = safetyhook::create_mid(exe(0x4B2588,0x4D36BC), [](SafetyHookContext& ctx) {
 				if (do_transitionTime) {
 					*(float*)(ctx.esp) = yap_xanim_iw3_float->value.decimal;
 				}
 				});
 
-			static auto XAnimSetGoalWeight2 = safetyhook::create_mid(0x4B25B7, [](SafetyHookContext& ctx) {
+			static auto XAnimSetGoalWeight2 = safetyhook::create_mid(exe(0x4B25B7,0x4D36EA), [](SafetyHookContext& ctx) {
 				if (do_transitionTime) {
 					*(float*)(ctx.esp) = yap_xanim_iw3_float->value.decimal;
 				}
 				});
 
-			static auto StartWeaponAnim_done = safetyhook::create_mid(0x4B25DA, [](SafetyHookContext& ctx) {
+			static auto StartWeaponAnim_done = safetyhook::create_mid(exe(0x4B25DA,0x4D3713), [](SafetyHookContext& ctx) {
 
 				do_transitionTime = false;
 
