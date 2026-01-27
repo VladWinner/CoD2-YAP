@@ -96,6 +96,9 @@
     <ClInclude Include="src\cexception.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\shared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp">
@@ -144,6 +147,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\xanims.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shared.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

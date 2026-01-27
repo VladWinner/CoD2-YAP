@@ -200,6 +200,7 @@ popd</Command>
     <ClInclude Include="src\loader\component_interface.h" />
     <ClInclude Include="src\loader\component_loader.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\shared.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\console.cpp" />
@@ -221,6 +222,7 @@ popd</Command>
     </ClCompile>
     <ClCompile Include="src\saves.cpp" />
     <ClCompile Include="src\SDLLP.cpp" />
+    <ClCompile Include="src\shared.cpp" />
     <ClCompile Include="src\sprint.cpp" />
     <ClCompile Include="src\xanims.cpp" />
   </ItemGroup>

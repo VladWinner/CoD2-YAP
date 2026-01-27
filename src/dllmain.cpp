@@ -12,6 +12,7 @@
 #include "buildnumber.h"
 
 #include "cexception.hpp"
+#include "shared.h"
 bool isMP = false;
 uintptr_t exe(uintptr_t sp, uintptr_t mp) {
     if(!isMP)
@@ -201,7 +202,7 @@ void Init() {
         MessageBoxA(NULL, "YAP", "Unsupported Title", 0);
         return;
     }
-        
+    shared::Init();
 
     SetUnhandledExceptionFilter(CustomUnhandledExceptionFilter);
 
