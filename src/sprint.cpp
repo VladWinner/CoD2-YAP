@@ -863,7 +863,7 @@ namespace sprint {
 
 		float* thing = (float*)pm->ps;
 		float adsFraction = thing[46];
-		bool isADS = adsFraction >= 0.1f;
+		bool isADS = flags & PMF_SIGHT_AIMING;
 
 		bool AllowedToSprint = !isADS && !(flags & PMF_CROUCH) && !(flags & PMF_PRONE) && !(flags & PMF_FRAG) && !(flags & PMF_MANTLE) && !(flags & PMF_LADDER);
 
