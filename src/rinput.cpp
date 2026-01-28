@@ -510,6 +510,12 @@ namespace rinput {
                 return;
             }
 
+            // I don't want the menu mouse to update while out of focus, as it's annoying while going over items.
+            if (!mouse_windowIsActive || GetForegroundWindow() != win_hwnd) {
+                Mouse_DeactivateIngameCursor();
+                return;
+            }
+
             // Scale the cursor position to the game window resolution
             // So if width is 1280 and cursor is at 1280, it will be 640 in 640x480 resolution
             int newMenuX = (cursorRelativePoint.x * 640) / (clientRect.right - clientRect.left);
@@ -536,9 +542,6 @@ namespace rinput {
             }
 
             Mouse_SetMenuCursorPos(newMenuX, newMenuY);
-
-
-            // Fullscreen menu or windowed game, use centering offset method
         }
         else {
 
