@@ -214,6 +214,11 @@ void Init() {
 
     Memory::VP::InterceptCall(exe(0x4509AF,0x466524), post_sv_cheats_first_addr, post_sv_cheats_first);
 
+    auto hunk = exe(0x426AB1 + 1);
+    if (hunk) {
+        Memory::VP::Patch<uint32_t>(hunk, 512);
+    }
+
     static const char* version = "CoD2-YAP r" BUILD_NUMBER_STR;
     if(exe(1))
     Memory::VP::Patch<const char*>(exe((0x004060E6 + 1)), version);
