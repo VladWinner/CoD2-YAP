@@ -405,10 +405,10 @@ namespace saves {
                 return;
 			Memory::VP::Patch(exe(0x4E051A + 1), "screenshotJPEG savegame %s"); // no need for save/ anymore as they pass in the correct path now!
             Memory::VP::InterceptCall(exe(0x4E051F), va_screenshotJPEG_og, va_screenshotJPEG); // they pass in a .svg at the end which isn't ideal for screenshots, you'd end up with .svg.jpg, so we'll remove it.
-
+            static bool SaveIsStartLevel = false;
             Memory::Nop(exe(0x4E0517), 2); // Allow for original screenshotJPEG savegame save/%s to work.
             static auto make_original_screenshotwork = safetyhook::create_mid(exe(0x4E0517), [](SafetyHookContext& ctx) {
-                if (!yap_save_take_screenshots->value.integer || (yap_save_take_screenshots->value.integer == 2 && levelshot[0] == '\0')) {
+                if (SaveIsStartLevel || (yap_save_take_screenshots->value.integer == 1 || (yap_save_take_screenshots->value.integer == 2 && levelshot[0] != '\0'))) {
                     ctx.eip = 0x4E0554;
                 }
 
@@ -419,6 +419,8 @@ namespace saves {
             static auto SV_AddPendingSave = safetyhook::create_mid(exe(0x44A140), [](SafetyHookContext& ctx) {
 
                 const char** imagename = (const char**)(ctx.esp + 0x8);
+
+                SaveIsStartLevel = (*(uintptr_t*)(ctx.esp + 0x4) == exe(0x579AD4));
 
                 if (imagename && *imagename) {
                     strcpy_s(levelshot, sizeof(levelshot), *imagename);
