@@ -40,11 +40,58 @@ namespace render {
 		if(safeArea_vertical)
 			safeArea_horizontal->modified = true;
 	}
+	uintptr_t CG_DrawSubtitles_addr;
+	static bool is_subtitle_draw = false;
+	int CG_DrawSubtitles() {
+		auto result = cdecl_call<int>(CG_DrawSubtitles_addr);
+		is_subtitle_draw = false;
+		return result;
+	}
+
 	class component final : public component_interface
 	{
 	public:
 		void post_unpack() override {
 			r_noborder = dvars::Dvar_RegisterInt("r_noborder", 0, 0, 1, DVAR_ARCHIVE,"Remove the border when running in windowed mode (set vid_xpos and vid_ypos to 0)");
+			static auto con_subtitleScale = dvars::Dvar_RegisterFloat("con_subtitleScale", 1.f, 0.f, FLT_MAX, DVAR_ARCHIVE | DVAR_CHANGEABLE_RESET, "Changes scaling of subtitles");
+			static auto cg_subtitle_centered_enable = dvars::Dvar_RegisterBool("cg_subtitle_centered_enable", 0, DVAR_ARCHIVE, "Centers the subtitles into the middle");
+
+			if (exe(1)) {
+				Memory::VP::InterceptCall(exe(0x4BFBA0), CG_DrawSubtitles_addr, CG_DrawSubtitles);
+				Memory::VP::InterceptCall(exe(0x4BFAB2), CG_DrawSubtitles_addr, CG_DrawSubtitles);
+				static auto Con_DrawSubtitle_calling = safetyhook::create_mid(exe(0x406C91), [](SafetyHookContext& ctx) {
+
+					if (cg_subtitle_centered_enable->value.boolean) {
+						*(float*)(ctx.esp + 0x18) = 1.f; // con_subtitleScale has to be 1.f at this stage rn, we'll scale it later.
+						*(int*)((ctx.esp + 0xC)) = 2;
+						ctx.ecx = 3;
+						is_subtitle_draw = true;
+					}
+					else {
+						is_subtitle_draw = false;
+					}
+
+					});
+
+				static auto DrawStringOnHudboldfont = safetyhook::create_mid(0x406345, [](SafetyHookContext& ctx) {
+
+					if (is_subtitle_draw) {
+						ctx.esi = *(int*)exe(0x0110745C); // from boldfont to Extrabigfont
+					}
+
+					});
+
+
+				static auto font_scale_bold = safetyhook::create_mid(0x4062F5, [](SafetyHookContext& ctx) {
+
+					if (is_subtitle_draw) {
+						*(float*)(ctx.esp + 0x34) *= (0.75f * con_subtitleScale->value.decimal);
+					}
+
+					});
+
+			}
+
 		}
 		void post_start() override {
 			SetProcessDPIAware();
