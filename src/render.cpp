@@ -104,6 +104,12 @@ namespace render {
 			SafeAreaisModified();
 		}
 		void post_gfx() override {
+			auto pattern = hook::pattern((HMODULE)gfx_d3d_dll, "68 ? ? ? ? 6A ? A3 ? ? ? ? 68 ? ? ? ? 68");
+
+			if (!pattern.empty()) {
+				Memory::VP::Patch<uint32_t>(pattern.get_first(1), DVAR_ARCHIVE | DVAR_RENDERER);
+			}
+
 			SafeAreaisModified();
 			if (!r_buf_dynamicIndexBuffer_mult) {
 				r_buf_dynamicIndexBuffer_mult = dvars::Dvar_RegisterFloat("r_buf_dynamicIndexBuffer_mult", 4.f, 1.f, 16.f, DVAR_ARCHIVE);
