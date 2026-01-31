@@ -221,6 +221,8 @@ namespace render {
 						rect->y = 0.f;
 						rect->w = 853.5f;
 						rect->h = 320.f;
+						rect->horzAlign = 0;
+						rect->vertAlign = 0;
 					}
 
 					rectDef_s main_back_bottom_og = { 0.f, 320.f, 640.f, 160.f };
@@ -229,6 +231,8 @@ namespace render {
 						rect->y = 320.f;
 						rect->w = 853.5f;
 						rect->h = 160.f;
+						rect->horzAlign = 0;
+						rect->vertAlign = 0;
 					}
 				}
 			}
