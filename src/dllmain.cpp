@@ -78,12 +78,35 @@ void OpenConsoleAndRedirectIO() {
 
 }
 
+EXTERN_C __declspec(dllexport) int __cdecl SteamStartup(unsigned int usingMask, void* pError)
+{
+    return 1;
+}
+
+EXTERN_C __declspec(dllexport) int __cdecl SteamCleanup(void* pError)
+{
+    return 1;
+}
+
+EXTERN_C __declspec(dllexport) int __cdecl SteamIsAppSubscribed(unsigned int appId, int* pbIsAppSubscribed, int* pbIsSubscriptionPending, void* pError)
+{
+    *pbIsAppSubscribed = 1;
+    *pbIsSubscriptionPending = 0;
+    return 1;
+}
+
 SafetyHookInline LoadLibraryD;
 SafetyHookInline FreeLibraryD;
 uintptr_t gfx_d3d_dll;
 HMODULE __stdcall LoadLibraryHook(const char* filename) {
 
     auto hModule = LoadLibraryD.unsafe_stdcall<HMODULE>(filename);
+
+    if (strstr(filename, "steam.dll") != NULL && !hModule) {
+        HMODULE moduleHandle;
+        GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)LoadLibraryHook, &moduleHandle);
+        return moduleHandle;
+    }
 
     if (strstr(filename, "gfx_d3d") != NULL) {
 
@@ -182,7 +205,6 @@ int post_sv_cheats_first() {
     component_loader::post_unpack();
     return cdecl_call<int>(post_sv_cheats_first_addr);
 }
-
 void Init() {
     OpenConsoleAndRedirectIO();
     uint32_t value;
@@ -198,7 +220,6 @@ void Init() {
         MessageBoxA(NULL, "YAP", "MP", 0);
     }
     else {
-
         MessageBoxA(NULL, "YAP", "Unsupported Title", 0);
         return;
     }
