@@ -158,6 +158,9 @@
     <ClCompile Include="src\rinput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\sound.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="src\include\fpu_ops_x86.asm">

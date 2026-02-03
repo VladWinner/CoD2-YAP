@@ -225,6 +225,7 @@ popd</Command>
     <ClCompile Include="src\saves.cpp" />
     <ClCompile Include="src\SDLLP.cpp" />
     <ClCompile Include="src\shared.cpp" />
+    <ClCompile Include="src\sound.cpp" />
     <ClCompile Include="src\sprint.cpp" />
     <ClCompile Include="src\xanims.cpp" />
   </ItemGroup>
