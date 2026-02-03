@@ -96,9 +96,9 @@ namespace sound {
 	}
 	SafetyHookInline SND_SetChannelVolumesD;
 	void* __fastcall SND_SetChannelVolumes(float* channelvolume,void* garbage, int a1, int priority) {
-		for (int i = 0; i < 11; i++) {
-			printf("channelvolume %f\n", channelvolume[i]);
-		}
+		//for (int i = 0; i < 11; i++) {
+		//	printf("channelvolume %f\n", channelvolume[i]);
+		//}
 		return SND_SetChannelVolumesD.unsafe_thiscall<void*>(channelvolume, a1, priority);
 	}
 
