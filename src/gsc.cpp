@@ -221,8 +221,10 @@ namespace gsc {
 		ScriptInitHandles.clear();
 
 		auto mapname = dvars::Dvar_FindVar("mapname")->value.string;
+		auto fs_basepath = dvars::Dvar_FindVar("fs_basepath")->value.string;
+		auto fs_game = dvars::Dvar_FindVar("fs_game")->value.string;
 
-		// Load from maps/custom
+		// Load from maps/custom (IWD/pak files and raw directories)
 		int max_files = 0;
 		auto files = FS_ListFilteredFiles(*(const char**)0x1CBAD00, "maps/custom", "gsc", NULL, &max_files);
 		FS_SortFileList(files, max_files);
@@ -265,6 +267,68 @@ namespace gsc {
 			}
 		}
 		FS_FreeFileList(files);
+
+		// Helper lambda to scan a directory and load matching scripts
+		auto scanDirectory = [&](const std::string& basePath, const std::string& subdir) {
+			std::string searchPath = basePath + "\\" + subdir + "\\maps\\custom";
+
+			// Check if directory exists
+			if (!std::filesystem::exists(searchPath)) {
+				return;
+			}
+
+			// Recursively iterate through all .gsc files
+			for (const auto& entry : std::filesystem::recursive_directory_iterator(searchPath)) {
+				if (entry.is_regular_file() && entry.path().extension() == ".gsc") {
+					std::string fullPath = entry.path().string();
+
+					// Extract the portion starting from "maps/custom/"
+					size_t mapsPos = fullPath.find("\\maps\\custom\\");
+					if (mapsPos == std::string::npos) {
+						continue;
+					}
+
+					// Get relative path from maps/custom/
+					std::string relativePath = fullPath.substr(mapsPos + 1); // +1 to skip leading backslash
+					std::replace(relativePath.begin(), relativePath.end(), '\\', '/'); // Convert to forward slashes
+
+					// Remove "maps/custom/" prefix to get remainder
+					std::string remainder = relativePath.substr(12); // "maps/custom/" is 12 chars
+
+					// Find the first slash to check if it's in a subdirectory
+					size_t slashPos = remainder.find('/');
+
+					bool shouldLoad = false;
+
+					if (slashPos == std::string::npos) {
+						// No slash = file directly in maps/custom/, always load
+						shouldLoad = true;
+					}
+					else {
+						// File is in a subdirectory, check if directory matches mapname
+						std::string dirname = remainder.substr(0, slashPos);
+						if (dirname == mapname) {
+							shouldLoad = true;
+						}
+					}
+
+					if (shouldLoad) {
+						// Remove .gsc extension and create script path
+						std::string scriptPath = relativePath.substr(0, relativePath.length() - 4);
+						printf("Loading script: %s\n", scriptPath.c_str());
+						LoadScript(scriptPath);
+					}
+				}
+			}
+			};
+
+		// Scan fs_basepath\main
+		scanDirectory(fs_basepath, "main");
+
+		// Scan fs_basepath\fs_game (if fs_game is set)
+		if (fs_game && strlen(fs_game) > 0) {
+			scanDirectory(fs_basepath, fs_game);
+		}
 	}
 	uintptr_t Path_AutoDisconnectPaths_addr;
 	int Path_AutoDisconnectPaths_Scr_LoadLevel() {
