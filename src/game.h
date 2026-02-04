@@ -353,7 +353,136 @@ namespace game {
 
 	extern binding_s* GetModdedBindings(uint32_t& current_size);
 
+	struct VariableStackBuffer
+	{
+		const char* pos;
+		unsigned __int16 size;
+		unsigned __int16 bufLen;
+		unsigned __int16 localId;
+		unsigned __int8 time;
+		char buf[1];
+	};
 
+	union VariableUnion
+	{
+		int intValue;
+		float floatValue;
+		unsigned int stringValue;
+		const float* vectorValue;
+		const char* codePosValue;
+		unsigned int pointerValue;
+		VariableStackBuffer* stackValue;
+		unsigned int entityOffset;
+	};
+
+	enum VariableType : __int32
+	{
+		VAR_UNDEFINED = 0x0,
+		VAR_POINTER = 0x1,
+		VAR_STRING = 0x2,
+		VAR_ISTRING = 0x3,
+		VAR_VECTOR = 0x4,
+		VAR_FLOAT = 0x5,
+		VAR_INTEGER = 0x6,
+		VAR_CODEPOS = 0x7,
+		VAR_PRECODEPOS = 0x8,
+		VAR_FUNCTION = 0x9,
+		VAR_STACK = 0xA,
+		VAR_ANIMATION = 0xB,
+		VAR_DEVELOPER_CODEPOS = 0xC,
+		VAR_THREAD = 0xD,
+		VAR_NOTIFY_THREAD = 0xE,
+		VAR_TIME_THREAD = 0xF,
+		VAR_CHILD_THREAD = 0x10,
+		VAR_OBJECT = 0x11,
+		VAR_DEAD_ENTITY = 0x12,
+		VAR_ENTITY = 0x13,
+		VAR_ARRAY = 0x14,
+		VAR_DEAD_THREAD = 0x15,
+		VAR_COUNT = 0x16,
+		VAR_THREAD_LIST = 0x17,
+		VAR_ENDON_LIST = 0x18,
+	};
+
+
+	struct VariableValue
+	{
+		VariableUnion u;
+		VariableType type;
+	};
+
+
+	struct function_stack_t
+	{
+		const char* pos;
+		unsigned int localId;
+		unsigned int localVarCount;
+		VariableValue* top;
+		VariableValue* startTop;
+	};
+
+
+	struct function_frame_t
+	{
+		function_stack_t fs;
+		VariableType topType;
+	};
+
+
+	struct scrVmPub_t
+	{
+		uint32_t *localVars;
+		VariableValue* maxstack;
+		uint32_t function_count;
+		function_frame_t* function_frame;
+		VariableValue* top;
+		bool debugCode;
+		bool abort_on_error;
+		bool terminal_error;
+		char pad0[1];
+		uint32_t inparamcount;
+		uint32_t outparamcount;
+		function_frame_t function_frame_start[32];
+		VariableValue stack[2048];
+	};
+
+	typedef unsigned __int16 scr_string_t;
+
+	struct scr_entref_t
+	{
+		scr_string_t entnum;
+		scr_string_t classnum;
+	};
+
+	typedef void(*xfunction_t)();
+	typedef void (*xmethod_t)(scr_entref_t);
+
+	typedef struct scr_function_s
+	{
+		struct scr_function_s* next;
+		char* name;
+		xfunction_t		function;
+		bool		developer;
+	} scr_function_t;
+
+	typedef struct scr_method_s
+	{
+		struct scr_method_s* next;
+		char* name;
+		xmethod_t function;
+		bool developer;
+	} scr_method_t;
+
+	inline uintptr_t Scr_GetFunc_addr = 0x46EB20;
+	inline void* Scr_GetFunc(int index) {
+		void* result;
+		__asm {
+			mov eax, index
+			call Scr_GetFunc_addr
+			mov result,eax
+		}
+		return result;
+	}
 }
 
 //struct playerstate_ext {
