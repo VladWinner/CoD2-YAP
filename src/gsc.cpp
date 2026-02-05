@@ -26,6 +26,9 @@ namespace gsc {
 		bool enabled;
 	};
 	std::unordered_map<const char*, ReplacementInfo> ReplacedFunctions;
+	std::unordered_map<const char*, const char*> OriginalToTopDetour;
+	// Track full stack
+	std::unordered_map<const char*, std::vector<const char*>> OriginalToDetourStack; 
 	const char* ReplacedPos = nullptr;
 
 
@@ -78,15 +81,33 @@ namespace gsc {
 			return;
 		}
 
-		if (ReplacedFunctions.contains(what))
+		// Check if there's already a detour stack for this function
+		if (OriginalToTopDetour.contains(what))
 		{
-			// Update existing entry
-			ReplacedFunctions[what].replacementPos = with;
-			ReplacedFunctions[what].enabled = enabled;
+			// Stack exists - new detour goes on top
+			const char* currentTop = OriginalToTopDetour[what];
+
+			// New detour points to current top
+			ReplacedFunctions[with] = { currentTop, false, enabled };
+
+			// Update top of stack
+			OriginalToTopDetour[what] = with;
+
+			// Add to stack tracking
+			OriginalToDetourStack[what].push_back(with);
+
+			Com_Printf("Stacked detour: %p (top: %p)\n", what, with);
 		}
 		else
 		{
-			ReplacedFunctions[what] = { with, false, enabled };
+			// First detour - points to original
+			ReplacedFunctions[with] = { what, false, enabled };
+			OriginalToTopDetour[what] = with;
+
+			// Initialize stack
+			OriginalToDetourStack[what] = { with };
+
+			Com_Printf("Created detour: %p -> %p\n", what, with);
 		}
 	}
 
@@ -97,25 +118,37 @@ namespace gsc {
 			return;
 		}
 
-		if (const auto itr = ReplacedFunctions.find(pos); itr != ReplacedFunctions.end())
+		if (OriginalToTopDetour.contains(pos))
 		{
-			if (!itr->second.enabled)
+			auto& stack = OriginalToDetourStack[pos];
+
+			for (auto it = stack.rbegin(); it != stack.rend(); ++it)
 			{
-				// Detour is disabled
-				ReplacedPos = nullptr;
+				const char* detour = *it;
+
+				if (!ReplacedFunctions.contains(detour))
+				{
+					continue;
+				}
+
+				auto& detourInfo = ReplacedFunctions[detour];
+
+				if (!detourInfo.enabled)
+				{
+					continue;
+				}
+
+				if (detourInfo.disableOnce)
+				{
+					// DON'T clear it here - just skip
+					continue;
+				}
+
+				ReplacedPos = detour;
 				return;
 			}
 
-			if (itr->second.disableOnce)
-			{
-				// Skip the detour this time
-				itr->second.disableOnce = false;
-				ReplacedPos = nullptr;
-			}
-			else
-			{
-				ReplacedPos = itr->second.replacementPos;
-			}
+			ReplacedPos = nullptr;
 		}
 	}
 	uintptr_t Scr_GetFunctionHandle_addr = 0x45DC30;
@@ -440,19 +473,21 @@ namespace gsc {
 					}
 				});
 
-			gsc::AddFunction("detour_disableonce", [] // gsc: DisableDetourOnce(<function>)
+			gsc::AddFunction("detour_disableonce", [] // gsc: detour_disableonce(<detour>)
 				{
 					const auto what = GetCodePosForParam(0);
 
 					if (!*what)
 					{
-						Com_Printf("Invalid parameter passed to DisableDetourOnce\n");
+						Com_Printf("Invalid parameter passed to detour_disableonce\n");
 						return;
 					}
 
 					if (const auto itr = ReplacedFunctions.find(what); itr != ReplacedFunctions.end())
 					{
+
 						itr->second.disableOnce = true;
+						//Com_Printf("Disabled detour %p once\n", what);
 					}
 					else
 					{
@@ -473,6 +508,14 @@ namespace gsc {
 					ReplacedPos = nullptr;
 				}
 
+				});
+
+			static auto VM_Return_Hook = safetyhook::create_mid(exe(0x469657), [](SafetyHookContext& ctx) {
+				// Clear all disableOnce flags when returning from any function
+				for (auto& [key, info] : ReplacedFunctions)
+				{
+					info.disableOnce = false;
+				}
 				});
 
 		}
